@@ -1,2 +1,2 @@
-# Nghi-Quyet-205-VKSKV2-LC
+# radar205-bot
 Đây là chatbot tự động
