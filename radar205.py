@@ -16,7 +16,7 @@ CACHE_FILE = "radar205_cache.json"
 BASE_LOCATIONS = [
     "Lâm Thượng",
     "Lục Yên",
-    "Khánh Hòa",
+    "xã Khánh Hòa",
     "Tân Lĩnh",
     "Bảo Ái",
     "Mường Lai",
@@ -24,7 +24,7 @@ BASE_LOCATIONS = [
     "Thác Bà",
     "Cảm Nhân",
     "Yên Bình",
-    "Phúc Lợi"
+    "xã Phúc Lợi"
 ]
 
 LOCATIONS = []
