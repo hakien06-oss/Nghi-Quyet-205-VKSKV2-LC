@@ -248,21 +248,21 @@ def process_article(title, content, link, source):
 def scan_google_news():
     for loc in BASE_LOCATIONS:
 
-       queries = [
-    loc,
-    f"{loc} phản ánh",
-    f"{loc} môi trường",
-    f"{loc} ô nhiễm",
-    f"{loc} bụi",
-    f"{loc} khói bụi",
-    f"{loc} dân bức xúc",
-    f"{loc} kêu cứu",
-    f"{loc} đất đai",
-    f"{loc} trẻ em",
-    f"{loc} hộ tịch",
-    f"{loc} thực phẩm",
-    f"{loc} hàng giả"
-]
+        queries = [
+            loc,
+            f"{loc} phản ánh",
+            f"{loc} môi trường",
+            f"{loc} ô nhiễm",
+            f"{loc} bụi",
+            f"{loc} khói bụi",
+            f"{loc} dân bức xúc",
+            f"{loc} kêu cứu",
+            f"{loc} đất đai",
+            f"{loc} trẻ em",
+            f"{loc} hộ tịch",
+            f"{loc} thực phẩm",
+            f"{loc} hàng giả"
+        ]
 
         for query in queries:
             try:
@@ -282,11 +282,9 @@ def scan_google_news():
                         entry.link,
                         "Google News"
                     )
-            except:
-                pass
 
-# ================= RSS =================
-def scan_rss():
+            except Exception as e:
+                print("Google News error:", e)
     for rss_url in RSS_SOURCES:
         try:
             feed = feedparser.parse(rss_url)
