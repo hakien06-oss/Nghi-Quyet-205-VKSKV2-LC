@@ -35,7 +35,7 @@ for loc in BASE_LOCATIONS:
 KEYWORDS = [
     "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước",
     "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải",
-    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng",
+    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng","bụi","bột đá", "bụi trắng"
     "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông",
     "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn",
     "thuốc giả","thuốc hết hạn","ngộ độc thực phẩm","suất ăn học đường",
