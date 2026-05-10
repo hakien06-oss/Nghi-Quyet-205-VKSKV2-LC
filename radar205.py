@@ -143,3 +143,159 @@ def get_updates():
 
     except:
         pass
+# ================= HELPERS =================
+def make_hash(text):
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+def detect_locations(text):
+    t = text.lower()
+    return list(set([x for x in LOCATIONS if x.lower() in t]))
+
+def detect_keywords(text):
+    t = text.lower()
+    return list(set([x for x in KEYWORDS if x.lower() in t]))
+
+def get_article_content(url):
+    try:
+        article = Article(url)
+        article.download()
+        article.parse()
+        return article.text
+    except:
+        return ""
+
+# ================= PROCESS =================
+new_articles_found = 0
+
+def process_article(title, content, link, source):
+    global new_articles_found
+
+    full = f"{title} {content}"
+
+    matched_locations = detect_locations(full)
+    matched_keywords = detect_keywords(full)
+
+    if not matched_locations:
+        return
+
+    if not matched_keywords:
+        return
+
+    key = make_hash(link)
+
+    if key in sent_cache:
+        return
+
+    sent_cache.add(key)
+    save_json(CACHE_FILE, list(sent_cache))
+
+    new_articles_found += 1
+
+    alert = f"""
+🚨 RÀ SOÁT VỤ VIỆC CÓ DẤU HIỆU THUỘC NQ 205
+
+📡 Nguồn:
+{source}
+
+⏰ Thời gian:
+{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+
+📍 Địa bàn:
+{", ".join(matched_locations)}
+
+🔍 Dấu hiệu:
+{", ".join(matched_keywords)}
+
+📰 Tiêu đề:
+{title}
+
+🔗 Link:
+{link}
+"""
+
+    broadcast(alert)
+
+# ================= GOOGLE NEWS =================
+def scan_google_news():
+    for loc in BASE_LOCATIONS:
+
+        queries = [
+            loc,
+            f"{loc} phản ánh",
+            f"{loc} dân sinh",
+            f"{loc} môi trường",
+            f"{loc} đất đai",
+            f"{loc} trẻ em",
+            f"{loc} hộ tịch",
+            f"{loc} thực phẩm",
+            f"{loc} hàng giả"
+        ]
+
+        for query in queries:
+            try:
+                rss_url = (
+                    f"https://news.google.com/rss/search?"
+                    f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+                )
+
+                feed = feedparser.parse(rss_url)
+
+                for entry in feed.entries[:10]:
+                    content = get_article_content(entry.link)
+
+                    process_article(
+                        entry.title,
+                        content,
+                        entry.link,
+                        "Google News"
+                    )
+            except:
+                pass
+
+# ================= RSS =================
+def scan_rss():
+    for rss_url in RSS_SOURCES:
+        try:
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:20]:
+                content = get_article_content(entry.link)
+
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    rss_url
+                )
+        except:
+            pass
+            # ================= MAIN =================
+def run():
+    global new_articles_found
+
+    # đọc người dùng mới /start hoặc /stop
+    get_updates()
+
+    # nếu chưa ai đăng ký thì thôi
+    if not subscribers:
+        print("No subscribers.")
+        return
+
+    broadcast("🔎 RADAR205 bắt đầu rà soát thông tin hôm nay...")
+
+    scan_google_news()
+    scan_rss()
+
+    if new_articles_found == 0:
+        broadcast(
+            """📭 Hôm nay không phát hiện thông tin mới thuộc phạm vi rà soát Nghị quyết 205.
+
+Hệ thống sẽ tiếp tục rà soát vào ngày mai."""
+        )
+    else:
+        broadcast(
+            f"✅ Hoàn thành rà soát. Phát hiện {new_articles_found} thông tin mới."
+        )
+
+if __name__ == "__main__":
+    run()
