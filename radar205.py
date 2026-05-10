@@ -8,10 +8,12 @@ import requests
 import feedparser
 from newspaper import Article
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+# ================= CONFIG =================
+TELEGRAM_TOKEN = "8668493802:AAH67Cc1Sa1dlzfACDzkoKYb-2OfxGTpIiI"
 
 CACHE_FILE = "radar205_cache.json"
+SUBSCRIBERS_FILE = "subscribers.json"
+UPDATES_FILE = "telegram_updates.json"
 
 BASE_LOCATIONS = [
     "Lâm Thượng",
@@ -20,12 +22,12 @@ BASE_LOCATIONS = [
     "Tân Lĩnh",
     "Bảo Ái",
     "Mường Lai",
-    "Yên Thành",
+    "xã Yên Thành",
     "Thác Bà",
     "Cảm Nhân",
     "Yên Bình",
     "xã Phúc Lợi"
-    "ở Lào Cai"
+    "Lào Cai"
 ]
 
 LOCATIONS = []
@@ -34,11 +36,11 @@ for loc in BASE_LOCATIONS:
     LOCATIONS.append(f"xã {loc}")
 
 KEYWORDS = [
-    "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước",
+    "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước","bụi","bột đá", "bụi trắng", "khai thác đá", "bụi đá"
     "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải",
-    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng","bụi","bột đá", "bụi trắng", "khai thác đá", "bụi đá"
-    "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông",
-    "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn", "hành lang giao thông", "bãi rác", "nắp cống"
+    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng",
+    "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông", "bãi rác", "nắp cống"
+    "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn",
     "thuốc giả","thuốc hết hạn","ngộ độc thực phẩm","suất ăn học đường",
     "hàng giả","hàng kém chất lượng","quảng cáo sai sự thật","thu phí trái quy định",
     "xâm hại di tích","phá dỡ di tích","cổ vật","bạo hành trẻ em","bỏ mặc trẻ em",
@@ -56,131 +58,88 @@ RSS_SOURCES = [
     "https://nld.com.vn/rss/home.rss"
 ]
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
+# ================= FILE HELPERS =================
+def load_json(file_name, default):
+    if os.path.exists(file_name):
         try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                return set(json.load(f))
+            with open(file_name, "r", encoding="utf-8") as f:
+                return json.load(f)
         except:
-            return set()
-    return set()
+            return default
+    return default
 
-def save_cache(cache):
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(cache), f)
+def save_json(file_name, data):
+    with open(file_name, "w", encoding="utf-8") as f:
+        json.dump(data, f)
 
-sent_cache = load_cache()
+sent_cache = set(load_json(CACHE_FILE, []))
+subscribers = load_json(SUBSCRIBERS_FILE, [])
+telegram_updates = load_json(UPDATES_FILE, {"offset": 0})
 
-def send_telegram(message):
-    if not TELEGRAM_TOKEN or not CHAT_ID:
-        return
-
-    requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": message[:4000]},
-        timeout=20
-    )
-
-def make_hash(text):
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
-
-def detect_locations(text):
-    t = text.lower()
-    return list(set([x for x in LOCATIONS if x.lower() in t]))
-
-def detect_keywords(text):
-    t = text.lower()
-    return list(set([x for x in KEYWORDS if x.lower() in t]))
-
-def get_article_content(url):
+# ================= TELEGRAM =================
+def send_message(chat_id, message):
     try:
-        article = Article(url)
-        article.download()
-        article.parse()
-        return article.text
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            data={
+                "chat_id": chat_id,
+                "text": message[:4000]
+            },
+            timeout=20
+        )
     except:
-        return ""
+        pass
 
-def process_article(title, content, link, source):
-    full = f"{title} {content}"
+def broadcast(message):
+    for chat_id in subscribers:
+        send_message(chat_id, message)
 
-    matched_locations = detect_locations(full)
-    matched_keywords = detect_keywords(full)
+def get_updates():
+    offset = telegram_updates.get("offset", 0)
 
-    if not matched_locations or not matched_keywords:
-        return
+    try:
+        r = requests.get(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={offset}",
+            timeout=20
+        )
 
-    key = make_hash(link)
+        data = r.json()
 
-    if key in sent_cache:
-        return
+        if not data.get("ok"):
+            return
 
-    sent_cache.add(key)
-    save_cache(sent_cache)
+        for item in data["result"]:
+            telegram_updates["offset"] = item["update_id"] + 1
 
-    alert = f"""
-🚨 Rà soát vụ việc có dấu hiệu thuộc phạm vi NQ 205
+            msg = item.get("message", {})
+            text = msg.get("text", "")
+            chat = msg.get("chat", {})
+            chat_id = chat.get("id")
 
-📡 Nguồn:
-{source}
+            if not chat_id:
+                continue
 
-⏰ Thời gian:
-{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+            if text == "/start":
+                if chat_id not in subscribers:
+                    subscribers.append(chat_id)
+                    save_json(SUBSCRIBERS_FILE, subscribers)
 
-📍 Địa bàn:
-{", ".join(matched_locations)}
+                send_message(
+                    chat_id,
+                    "✅ Bạn đã đăng ký nhận cảnh báo RADAR205 hằng ngày."
+                )
 
-🔍 Dấu hiệu:
-{", ".join(matched_keywords)}
+            elif text == "/stop":
+                if chat_id in subscribers:
+                    subscribers.remove(chat_id)
+                    save_json(SUBSCRIBERS_FILE, subscribers)
 
-📰 Tiêu đề:
-{title}
+                send_message(
+                    chat_id,
+                    "⛔ Bạn đã hủy đăng ký nhận cảnh báo."
+                )
 
-🔗 Link:
-{link}
-"""
+        save_json(UPDATES_FILE, telegram_updates)
 
-    print(alert)
-    send_telegram(alert)
-
-def scan_google_news():
-    for loc in BASE_LOCATIONS:
-        queries = [
-            loc,
-            f"{loc} phản ánh",
-            f"{loc} môi trường",
-            f"{loc} đất đai",
-            f"{loc} trẻ em",
-            f"{loc} hộ tịch"
-        ]
-
-        for query in queries:
-            try:
-                rss_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
-                feed = feedparser.parse(rss_url)
-
-                for entry in feed.entries[:10]:
-                    content = get_article_content(entry.link)
-                    process_article(entry.title, content, entry.link, "Google News")
-            except:
-                pass
-
-def scan_rss():
-    for rss_url in RSS_SOURCES:
-        try:
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:20]:
-                content = get_article_content(entry.link)
-                process_article(entry.title, content, entry.link, rss_url)
-        except:
-            pass
-
-def run():
-    send_telegram("✅ Bắt đầu rà soát tin mới NQ205")
-    scan_google_news()
-    scan_rss()
-    send_telegram("✅ Hoàn thành rà soát tin mới NQ205")
-
-if __name__ == "__main__":
-    run()
+    except:
+        pass
