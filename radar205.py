@@ -74,6 +74,12 @@ def save_json(file_name, data):
 
 sent_cache = set(load_json(CACHE_FILE, []))
 subscribers = load_json(SUBSCRIBERS_FILE, [])
+
+ADMIN_CHAT_ID = 1938209271
+
+if ADMIN_CHAT_ID not in subscribers:
+    subscribers.append(ADMIN_CHAT_ID)
+    save_json(SUBSCRIBERS_FILE, subscribers)
 telegram_updates = load_json(UPDATES_FILE, {"offset": 0})
 
 # ================= TELEGRAM =================
