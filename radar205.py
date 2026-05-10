@@ -301,6 +301,23 @@ def scan_google_news():
         except:
             pass
             # ================= MAIN =================
+def scan_rss():
+    for rss_url in RSS_SOURCES:
+        try:
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:20]:
+                content = get_article_content(entry.link)
+
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    rss_url
+                )
+
+        except Exception as e:
+            print("RSS error:", e)
 def run():
     global new_articles_found
 
