@@ -37,7 +37,15 @@ for loc in BASE_LOCATIONS:
 
 KEYWORDS = [
     "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước","bụi","bột đá", "bụi trắng", "khai thác đá", "bụi đá"
-    "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải",
+    "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải","khói bụi",
+    "bụi trắng",
+    "bụi mù mịt",
+    "bụi bặm", "phản ánh",
+    "bức xúc",
+    "kêu cứu",
+    "kiến nghị",
+    "dân khổ",
+    "người dân phản ánh"
     "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng",
     "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông", "bãi rác", "nắp cống"
     "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn",
@@ -184,7 +192,16 @@ def process_article(title, content, link, source):
     if not matched_locations:
         return
 
-    if not matched_keywords:
+   if not matched_keywords:
+    title_lower = title.lower()
+
+    soft_hits = [
+        "bụi", "ô nhiễm", "khói",
+        "bức xúc", "kêu cứu",
+        "phản ánh"
+    ]
+
+    if not any(x in title_lower for x in soft_hits):
         return
 
     key = make_hash(link)
@@ -225,17 +242,21 @@ def process_article(title, content, link, source):
 def scan_google_news():
     for loc in BASE_LOCATIONS:
 
-        queries = [
-            loc,
-            f"{loc} phản ánh",
-            f"{loc} dân sinh",
-            f"{loc} môi trường",
-            f"{loc} đất đai",
-            f"{loc} trẻ em",
-            f"{loc} hộ tịch",
-            f"{loc} thực phẩm",
-            f"{loc} hàng giả"
-        ]
+       queries = [
+    loc,
+    f"{loc} phản ánh",
+    f"{loc} môi trường",
+    f"{loc} ô nhiễm",
+    f"{loc} bụi",
+    f"{loc} khói bụi",
+    f"{loc} dân bức xúc",
+    f"{loc} kêu cứu",
+    f"{loc} đất đai",
+    f"{loc} trẻ em",
+    f"{loc} hộ tịch",
+    f"{loc} thực phẩm",
+    f"{loc} hàng giả"
+]
 
         for query in queries:
             try:
