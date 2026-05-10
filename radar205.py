@@ -192,17 +192,23 @@ def process_article(title, content, link, source):
     if not matched_locations:
         return
 
-   if not matched_keywords:
-    title_lower = title.lower()
+    # mềm hóa logic phát hiện
+    if not matched_keywords:
+        title_lower = title.lower()
 
-    soft_hits = [
-        "bụi", "ô nhiễm", "khói",
-        "bức xúc", "kêu cứu",
-        "phản ánh"
-    ]
+        soft_hits = [
+            "bụi",
+            "ô nhiễm",
+            "khói",
+            "bức xúc",
+            "kêu cứu",
+            "phản ánh",
+            "kiến nghị",
+            "ảnh hưởng sức khỏe"
+        ]
 
-    if not any(x in title_lower for x in soft_hits):
-        return
+        if not any(x in title_lower for x in soft_hits):
+            return
 
     key = make_hash(link)
 
@@ -227,7 +233,7 @@ def process_article(title, content, link, source):
 {", ".join(matched_locations)}
 
 🔍 Dấu hiệu:
-{", ".join(matched_keywords)}
+{", ".join(matched_keywords) if matched_keywords else "Dấu hiệu cảnh báo mềm (AI nhận diện tiêu đề)"}
 
 📰 Tiêu đề:
 {title}
@@ -267,7 +273,7 @@ def scan_google_news():
 
                 feed = feedparser.parse(rss_url)
 
-                for entry in feed.entries[:10]:
+                for entry in feed.entries[:25]:
                     content = get_article_content(entry.link)
 
                     process_article(
