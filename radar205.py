@@ -25,6 +25,7 @@ BASE_LOCATIONS = [
     "Cảm Nhân",
     "Yên Bình",
     "xã Phúc Lợi"
+    "ở Lào Cai"
 ]
 
 LOCATIONS = []
@@ -35,9 +36,9 @@ for loc in BASE_LOCATIONS:
 KEYWORDS = [
     "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước",
     "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải",
-    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng","bụi","bột đá", "bụi trắng"
+    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng","bụi","bột đá", "bụi trắng", "khai thác đá", "bụi đá"
     "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông",
-    "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn",
+    "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn", "hành lang giao thông", "bãi rác", "nắp cống"
     "thuốc giả","thuốc hết hạn","ngộ độc thực phẩm","suất ăn học đường",
     "hàng giả","hàng kém chất lượng","quảng cáo sai sự thật","thu phí trái quy định",
     "xâm hại di tích","phá dỡ di tích","cổ vật","bạo hành trẻ em","bỏ mặc trẻ em",
