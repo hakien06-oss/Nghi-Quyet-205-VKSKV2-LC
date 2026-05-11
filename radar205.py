@@ -8,8 +8,12 @@ import requests
 import feedparser
 from newspaper import Article
 
-# ================= CONFIG =================
+# ===============================
+# CONFIG
+# ===============================
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "1938209271"))
 
 CACHE_FILE = "radar205_cache.json"
 SUBSCRIBERS_FILE = "subscribers.json"
@@ -17,16 +21,16 @@ UPDATES_FILE = "telegram_updates.json"
 
 BASE_LOCATIONS = [
     "Lâm Thượng",
-    "Lục Yên",
-    "xã Khánh Hòa",
-    "Tân Lĩnh",
+    "Khánh Hòa",
+    "Phúc Lợi",
     "Bảo Ái",
     "Mường Lai",
-    "xã Yên Thành",
+    "Yên Bình",
     "Thác Bà",
     "Cảm Nhân",
-    "Yên Bình",
-    "xã Phúc Lợi"
+    "Lục Yên",
+    "Yên Thành",
+    "Tân Lĩnh",
     "Lào Cai"
 ]
 
@@ -34,26 +38,72 @@ LOCATIONS = []
 for loc in BASE_LOCATIONS:
     LOCATIONS.append(loc)
     LOCATIONS.append(f"xã {loc}")
+    LOCATIONS.append(f"tỉnh {loc}")
 
 KEYWORDS = [
-    "đổ rác","rác thải","ô nhiễm","ô nhiễm môi trường","ô nhiễm nguồn nước","bụi","bột đá", "bụi trắng", "khai thác đá", "bụi đá"
-    "ô nhiễm không khí","đốt rác","xả nước thải","xả thải","nước thải","khói bụi",
+    # môi trường
+    "ô nhiễm",
+    "ô nhiễm môi trường",
+    "ô nhiễm không khí",
+    "ô nhiễm nguồn nước",
+    "bụi",
     "bụi trắng",
     "bụi mù mịt",
-    "bụi bặm", "phản ánh",
+    "bụi bặm",
+    "khói",
+    "khói bụi",
+    "mùi hôi",
+    "xả thải",
+    "xả nước thải",
+    "nước thải",
+    "rác",
+    "rác thải",
+    "đổ rác",
+    "đốt rác",
+    "ô nhiễm tiếng ồn",
+    "ảnh hưởng sức khỏe",
+    "gây ô nhiễm",
+
+    # đất đai
+    "lấn chiếm đất",
+    "đất công",
+    "hành lang giao thông",
+    "hành lang suối",
+    "san gạt",
+    "đất rừng",
+    "tài sản công",
+    "khai thác khoáng sản",
+    "khai thác cát",
+    "khai thác sỏi",
+    "sạt lở",
+
+    # an toàn thực phẩm
+    "thực phẩm bẩn",
+    "ngộ độc",
+    "thuốc giả",
+    "thuốc hết hạn",
+
+    # tiêu dùng
+    "hàng giả",
+    "hàng kém chất lượng",
+    "quảng cáo sai sự thật",
+
+    # nhóm yếu thế
+    "bạo hành trẻ em",
+    "bỏ mặc trẻ em",
+    "không giấy khai sinh",
+    "không được cấp căn cước",
+    "hộ tịch",
+    "người già neo đơn",
+    "người dân tộc thiểu số",
+
+    # ngôn ngữ báo chí mềm
+    "phản ánh",
     "bức xúc",
     "kêu cứu",
     "kiến nghị",
-    "dân khổ",
-    "người dân phản ánh"
-    "khai thác khoáng sản","khai thác cát","khai thác sỏi","sạt lở","phá rừng",
-    "hủy hoại môi trường","lấn chiếm đất","đất công","hành lang giao thông", "bãi rác", "nắp cống"
-    "hành lang suối","san gạt","đất rừng","tài sản công","thực phẩm bẩn",
-    "thuốc giả","thuốc hết hạn","ngộ độc thực phẩm","suất ăn học đường",
-    "hàng giả","hàng kém chất lượng","quảng cáo sai sự thật","thu phí trái quy định",
-    "xâm hại di tích","phá dỡ di tích","cổ vật","bạo hành trẻ em","bỏ mặc trẻ em",
-    "trẻ em khuyết tật","người già neo đơn","mất năng lực hành vi","phụ nữ mang thai",
-    "người dân tộc thiểu số","không giấy khai sinh","không được cấp căn cước","hộ tịch"
+    "người dân phản ánh",
+    "dân khổ"
 ]
 
 RSS_SOURCES = [
@@ -63,10 +113,19 @@ RSS_SOURCES = [
     "https://laodong.vn/rss/home.rss",
     "https://thanhnien.vn/rss/home.rss",
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
-    "https://nld.com.vn/rss/home.rss"
+    "https://nld.com.vn/rss/home.rss",
+    "https://tienphong.vn/rss/home.rss",
+    "https://plo.vn/rss/home.rss",
+    "https://vov.vn/rss/vov.rss",
+    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://congly.vn/rss/home.rss",
+    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss"
 ]
 
-# ================= FILE HELPERS =================
+# ===============================
+# FILE HELPERS
+# ===============================
+
 def load_json(file_name, default):
     if os.path.exists(file_name):
         try:
@@ -76,21 +135,24 @@ def load_json(file_name, default):
             return default
     return default
 
+
 def save_json(file_name, data):
     with open(file_name, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
+
 sent_cache = set(load_json(CACHE_FILE, []))
 subscribers = load_json(SUBSCRIBERS_FILE, [])
-
-ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "1938209271"))
+telegram_updates = load_json(UPDATES_FILE, {"offset": 0})
 
 if ADMIN_CHAT_ID not in subscribers:
     subscribers.append(ADMIN_CHAT_ID)
     save_json(SUBSCRIBERS_FILE, subscribers)
-telegram_updates = load_json(UPDATES_FILE, {"offset": 0})
 
-# ================= TELEGRAM =================
+# ===============================
+# TELEGRAM
+# ===============================
+
 def send_message(chat_id, message):
     try:
         requests.post(
@@ -101,12 +163,14 @@ def send_message(chat_id, message):
             },
             timeout=20
         )
-    except:
-        pass
+    except Exception as e:
+        print("Telegram error:", e)
+
 
 def broadcast(message):
     for chat_id in subscribers:
         send_message(chat_id, message)
+
 
 def get_updates():
     offset = telegram_updates.get("offset", 0)
@@ -144,7 +208,7 @@ def get_updates():
                 )
 
             elif text == "/stop":
-                if chat_id in subscribers:
+                if chat_id in subscribers and chat_id != ADMIN_CHAT_ID:
                     subscribers.remove(chat_id)
                     save_json(SUBSCRIBERS_FILE, subscribers)
 
@@ -152,63 +216,110 @@ def get_updates():
                     chat_id,
                     "⛔ Bạn đã hủy đăng ký nhận cảnh báo."
                 )
+    except Exception as e:
+        print("Update error:", e)
 
-        save_json(UPDATES_FILE, telegram_updates)
+    save_json(UPDATES_FILE, telegram_updates) 
+# ===============================
+# HELPERS
+# ===============================
 
-    except:
-        pass
-# ================= HELPERS =================
 def make_hash(text):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
+
 def detect_locations(text):
     t = text.lower()
-    return list(set([x for x in LOCATIONS if x.lower() in t]))
+    found = []
+    for x in LOCATIONS:
+        if x.lower() in t:
+            found.append(x)
+    return list(set(found))
+
 
 def detect_keywords(text):
     t = text.lower()
-    return list(set([x for x in KEYWORDS if x.lower() in t]))
+    found = []
+    for x in KEYWORDS:
+        if x.lower() in t:
+            found.append(x)
+    return list(set(found))
+
 
 def get_article_content(url):
     try:
         article = Article(url)
         article.download()
         article.parse()
-        return article.text
+
+        if article.text and len(article.text) > 200:
+            return article.text
+    except:
+        pass
+
+    try:
+        r = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=15
+        )
+        return r.text
     except:
         return ""
 
-# ================= PROCESS =================
+
+# ===============================
+# PROCESS
+# ===============================
+
 new_articles_found = 0
+
 
 def process_article(title, content, link, source):
     global new_articles_found
 
-    full = f"{title} {content}"
+    full = f"{title} {content}".lower()
 
     matched_locations = detect_locations(full)
     matched_keywords = detect_keywords(full)
 
+    soft_location_hits = [
+        "lâm thượng",
+        "khánh hòa",
+        "phúc lợi",
+        "bảo ái",
+        "mường lai",
+        "yên bình",
+        "thác bà",
+        "cảm nhân",
+        "lục yên",
+        "yên thành",
+        "tân lĩnh",
+        "lào cai"
+    ]
+
     if not matched_locations:
-        return
+        if any(x in full for x in soft_location_hits):
+            matched_locations = ["Nhận diện mềm theo nội dung"]
 
-    # mềm hóa logic phát hiện
+    soft_keywords = [
+        "bụi",
+        "khói",
+        "khói bụi",
+        "ô nhiễm",
+        "bức xúc",
+        "kêu cứu",
+        "kiến nghị",
+        "ảnh hưởng sức khỏe",
+        "người dân phản ánh"
+    ]
+
     if not matched_keywords:
-        title_lower = title.lower()
+        if any(x in full for x in soft_keywords):
+            matched_keywords = ["Dấu hiệu cảnh báo mềm"]
 
-        soft_hits = [
-            "bụi",
-            "ô nhiễm",
-            "khói",
-            "bức xúc",
-            "kêu cứu",
-            "phản ánh",
-            "kiến nghị",
-            "ảnh hưởng sức khỏe"
-        ]
-
-        if not any(x in title_lower for x in soft_hits):
-            return
+    if not matched_locations or not matched_keywords:
+        return
 
     key = make_hash(link)
 
@@ -233,7 +344,7 @@ def process_article(title, content, link, source):
 {", ".join(matched_locations)}
 
 🔍 Dấu hiệu:
-{", ".join(matched_keywords) if matched_keywords else "Dấu hiệu cảnh báo mềm (AI nhận diện tiêu đề)"}
+{", ".join(matched_keywords)}
 
 📰 Tiêu đề:
 {title}
@@ -244,10 +355,13 @@ def process_article(title, content, link, source):
 
     broadcast(alert)
 
-# ================= GOOGLE NEWS =================
+
+# ===============================
+# SCANNERS
+# ===============================
+
 def scan_google_news():
     for loc in BASE_LOCATIONS:
-
         queries = [
             loc,
             f"{loc} phản ánh",
@@ -285,28 +399,14 @@ def scan_google_news():
 
             except Exception as e:
                 print("Google News error:", e)
-    for rss_url in RSS_SOURCES:
-        try:
-            feed = feedparser.parse(rss_url)
 
-            for entry in feed.entries[:20]:
-                content = get_article_content(entry.link)
 
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    rss_url
-                )
-        except:
-            pass
-            # ================= MAIN =================
 def scan_rss():
     for rss_url in RSS_SOURCES:
         try:
             feed = feedparser.parse(rss_url)
 
-            for entry in feed.entries[:20]:
+            for entry in feed.entries[:25]:
                 content = get_article_content(entry.link)
 
                 process_article(
@@ -318,13 +418,17 @@ def scan_rss():
 
         except Exception as e:
             print("RSS error:", e)
+
+
+# ===============================
+# MAIN
+# ===============================
+
 def run():
     global new_articles_found
 
-    # đọc người dùng mới /start hoặc /stop
     get_updates()
 
-    # nếu chưa ai đăng ký thì thôi
     if not subscribers:
         print("No subscribers.")
         return
@@ -344,6 +448,7 @@ Hệ thống sẽ tiếp tục rà soát vào ngày mai."""
         broadcast(
             f"✅ Hoàn thành rà soát. Phát hiện {new_articles_found} thông tin mới."
         )
+
 
 if __name__ == "__main__":
     run()
