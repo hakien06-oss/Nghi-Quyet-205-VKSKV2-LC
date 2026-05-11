@@ -2,7 +2,7 @@ name: Radar205 Daily Scan
 
 on:
   schedule:
-   - cron: '*/10 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,9 +26,10 @@ jobs:
 
       - name: Run radar bot
         env:
-            TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-            ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
         run: python radar205.py
+
       - name: Save bot data
         run: |
           git config --global user.name "github-actions"
