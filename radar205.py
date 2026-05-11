@@ -21,15 +21,15 @@ UPDATES_FILE = "telegram_updates.json"
 
 BASE_LOCATIONS = [
     "Lâm Thượng",
-    "Khánh Hòa",
-    "Phúc Lợi",
+    "xã Khánh Hòa",
+    "xã Phúc Lợi",
     "Bảo Ái",
     "Mường Lai",
     "Yên Bình",
     "Thác Bà",
     "Cảm Nhân",
     "Lục Yên",
-    "Yên Thành",
+    "xã Yên Thành",
     "Tân Lĩnh",
     "Lào Cai"
 ]
