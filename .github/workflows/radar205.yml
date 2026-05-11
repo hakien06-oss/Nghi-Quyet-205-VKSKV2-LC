@@ -1,7 +1,6 @@
 name: Radar205 Daily Scan
 
 on:
-
   workflow_dispatch:
 
 jobs:
@@ -29,13 +28,17 @@ jobs:
           ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
         run: python radar205.py
 
-          - name: Save bot data
+      - name: Save bot data
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add radar205_cache.json
-          git add subscribers.json
-          git add telegram_updates.json
+
+          git add radar205_cache.json || true
+          git add subscribers.json || true
+          git add telegram_updates.json || true
+
           git commit -m "update radar data" || echo "No changes"
+
           git pull --rebase || true
-          git push || echo "GitHub push skipped" 
+
+          git push || echo "GitHub push skipped"
