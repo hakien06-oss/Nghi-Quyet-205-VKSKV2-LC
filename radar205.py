@@ -285,15 +285,15 @@ def process_article(title, content, link, source):
 
     soft_location_hits = [
         "lâm thượng",
-        "khánh hòa",
-        "phúc lợi",
+        "xã khánh hòa",
+        "xã phúc lợi",
         "bảo ái",
         "mường lai",
         "yên bình",
         "thác bà",
         "cảm nhân",
         "lục yên",
-        "yên thành",
+        "xã yên thành",
         "tân lĩnh",
         "lào cai"
     ]
