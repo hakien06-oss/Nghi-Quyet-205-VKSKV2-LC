@@ -9,7 +9,7 @@ import feedparser
 from newspaper import Article
 
 # ================= CONFIG =================
-TELEGRAM_TOKEN = "8668493802:AAH67Cc1Sa1dlzfACDzkoKYb-2OfxGTpIiI"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 CACHE_FILE = "radar205_cache.json"
 SUBSCRIBERS_FILE = "subscribers.json"
@@ -83,7 +83,7 @@ def save_json(file_name, data):
 sent_cache = set(load_json(CACHE_FILE, []))
 subscribers = load_json(SUBSCRIBERS_FILE, [])
 
-ADMIN_CHAT_ID = 1938209271
+ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "1938209271"))
 
 if ADMIN_CHAT_ID not in subscribers:
     subscribers.append(ADMIN_CHAT_ID)
