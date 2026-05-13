@@ -63,6 +63,9 @@ KEYWORDS = [
     "ô nhiễm tiếng ồn",
     "ảnh hưởng sức khỏe",
     "gây ô nhiễm",
+    "mỏ đá",
+    "gây phiền",
+    "bãi thải",
 
     # đất đai
     "lấn chiếm đất",
