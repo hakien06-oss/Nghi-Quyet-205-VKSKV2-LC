@@ -66,6 +66,9 @@ KEYWORDS = [
     "mỏ đá",
     "gây phiền",
     "bãi thải",
+    "mỏ đá nằm sát khu dân cư",
+    "mỏ đá đập đục",
+    "mỏ đá trắng ở",
 
     # đất đai
     "lấn chiếm đất",
@@ -79,7 +82,8 @@ KEYWORDS = [
     "khai thác cát",
     "khai thác sỏi",
     "sạt lở",
-
+    "mỏ đá",
+    
     # an toàn thực phẩm
     "thực phẩm bẩn",
     "ngộ độc",
