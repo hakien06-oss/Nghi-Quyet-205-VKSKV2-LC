@@ -110,6 +110,9 @@ KEYWORDS = [
      # DẤU HIỆU TỘI PHẠM HÌNH SỰ
     "giết người",
     "cố ý gây thương tích",
+    "kêu oan",
+    "án oan",
+    "cán bộ vòi tiền",
     "đánh người",
     "hành hung",
     "chém người",
