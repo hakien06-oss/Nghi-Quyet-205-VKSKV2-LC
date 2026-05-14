@@ -106,13 +106,52 @@ KEYWORDS = [
     "hàng giả",
     "hàng kém chất lượng",
     "quảng cáo sai sự thật",
+    
+     # DẤU HIỆU TỘI PHẠM HÌNH SỰ
+    "giết người",
+    "cố ý gây thương tích",
+    "đánh người",
+    "hành hung",
+    "chém người",
+    "đâm người",
+    "gây rối trật tự công cộng",
+    "cướp",
+    "cướp giật",
+    "trộm cắp",
+    "trộm",
+    "lừa đảo",
+    "chiếm đoạt tài sản",
+    "tham ô",
+    "nhận hối lộ",
+    "đưa hối lộ",
+    "môi giới hối lộ",
+    "tham nhũng",
+    "giả mạo giấy tờ",
+    "làm giả",
+    "giấy tờ giả",
+    "ma túy",
+    "tàng trữ ma túy",
+    "mua bán ma túy",
+    "tổ chức sử dụng ma túy",
+    "đánh bạc",
+    "tổ chức đánh bạc",
+    "buôn lậu",
+    "hàng cấm",
+    "vận chuyển hàng cấm",
+    "hủy hoại tài sản",
+    "đe dọa giết người",
+    "chống người thi hành công vụ",
 
     # nhóm yếu thế
     "bạo hành trẻ em",
+    "xâm hại trẻ em",
+    "xâm hại tình dục",
+    "hiếp dâm",
+    "dâm ô",
     "bỏ mặc trẻ em",
-    "không giấy khai sinh",
-    "không được cấp căn cước",
-    "hộ tịch",
+    "mua bán người",
+    "bóc lột lao động",
+    "bạo lực gia đình",
     "người già neo đơn",
     "người dân tộc thiểu số",
 
@@ -229,7 +268,7 @@ def get_updates():
 
                 send_message(
                     chat_id,
-                    "✅ Bạn đã đăng ký nhận cảnh báo RADAR205 hằng ngày."
+                    "✅ Chào mừng bạn đã đã đăng ký nhận thông tin cảnh báo các vụ việc, nguồn tin về Nghị quyết 205 và các vụ việc có dấu hiệu vi phạm pháp luật trên địa bàn quản lý của VKSND khu vực 2, tỉnh Lào Cai."
                 )
 
             elif text == "/stop":
@@ -328,7 +367,8 @@ def process_article(title, content, link, source):
         "lục yên",
         "xã yên thành",
         "tân lĩnh",
-        "lào cai"
+        "lào cai",
+        "mỏ đá",
     ]
 
     if not matched_locations:
@@ -365,7 +405,7 @@ def process_article(title, content, link, source):
     new_articles_found += 1
 
     alert = f"""
-🚨 RÀ SOÁT VỤ VIỆC CÓ DẤU HIỆU THUỘC NQ 205
+🚨 CẢNH BÁO NGUỒN TIN CÓ DẤU HIỆU VI PHẠM PHÁP LUẬT
 
 📡 Nguồn:
 {source}
