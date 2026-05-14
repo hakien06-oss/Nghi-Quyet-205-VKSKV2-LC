@@ -31,7 +31,9 @@ BASE_LOCATIONS = [
     "Lục Yên",
     "xã Yên Thành",
     "Tân Lĩnh",
-    "Lào Cai"
+    "Lào Cai",
+    "huyện Lục Yên",
+    "hồ Thác Bà",
 ]
 
 LOCATIONS = []
@@ -69,6 +71,16 @@ KEYWORDS = [
     "mỏ đá nằm sát khu dân cư",
     "mỏ đá đập đục",
     "mỏ đá trắng ở",
+    "nổ mìn",
+    "rung chấn",
+    "đá văng",
+    "đe dọa an toàn",
+    "bất an",
+    "lo lắng",
+    "nguy hiểm",
+    "xe quá tải",
+    "xe chở vật liệu",
+    "bụi phủ",
 
     # đất đai
     "lấn chiếm đất",
@@ -127,6 +139,12 @@ RSS_SOURCES = [
     "https://baotainguyenmoitruong.vn/rss/home.rss",
     "https://congly.vn/rss/home.rss",
     "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss"
+    "https://laodong.vn/rss/ban-doc.rss",
+    "https://laodong.vn/rss/xa-hoi.rss",
+    "https://laodong.vn/rss/moi-truong.rss",
+    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
+
 ]
 
 # ===============================
@@ -267,10 +285,18 @@ def get_article_content(url):
     try:
         r = requests.get(
             url,
-            headers={"User-Agent": "Mozilla/5.0"},
-            timeout=15
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            },
+            timeout=20
         )
-        return r.text
+
+        html = r.text
+
+        # fallback thô nhưng hữu ích hơn
+        cleaned = html.replace("<", " ").replace(">", " ")
+
+        return cleaned
     except:
         return ""
 
