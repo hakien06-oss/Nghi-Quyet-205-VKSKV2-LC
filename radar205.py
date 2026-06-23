@@ -449,63 +449,66 @@ def process_article(title, content, link, source):
 # ===============================
 
 def scan_google_news():
-    for loc in BASE_LOCATIONS:
-queries = [
-    loc,
-    f"{loc} phản ánh",
-    f"{loc} kiến nghị",
-    f"{loc} khiếu nại",
-    f"{loc} tố cáo",
-    f"{loc} môi trường",
-    f"{loc} ô nhiễm",
-    f"{loc} xả thải",
-    f"{loc} rác thải",
-    f"{loc} đất đai",
-    f"{loc} lấn chiếm đất",
-    f"{loc} tài sản công",
-    f"{loc} khai thác khoáng sản",
-    f"{loc} khai thác cát",
-    f"{loc} khai thác sỏi",
-    f"{loc} mỏ đá",
-    f"{loc} trẻ em",
-    f"{loc} xâm hại trẻ em",
-    f"{loc} thực phẩm bẩn",
-    f"{loc} hàng giả",
-    f"{loc} lừa đảo",
-    f"{loc} tham nhũng",
-    f"{loc} ma túy",
+for loc in BASE_LOCATIONS:
+    
+    queries = [
+        loc,
+        f"{loc} phản ánh",
+        f"{loc} kiến nghị",
+        f"{loc} khiếu nại",
+        f"{loc} tố cáo",
+        f"{loc} môi trường",
+        f"{loc} ô nhiễm",
+        f"{loc} xả thải",
+        f"{loc} rác thải",
+        f"{loc} đất đai",
+        f"{loc} lấn chiếm đất",
+        f"{loc} tài sản công",
+        f"{loc} khai thác khoáng sản",
+        f"{loc} khai thác cát",
+        f"{loc} khai thác sỏi",
+        f"{loc} mỏ đá",
+        f"{loc} trẻ em",
+        f"{loc} xâm hại trẻ em",
+        f"{loc} thực phẩm bẩn",
+        f"{loc} hàng giả",
+        f"{loc} lừa đảo",
+        f"{loc} tham nhũng",
+        f"{loc} ma túy",
 
-    f'site:baolaocai.vn "{loc}"',
-    f'site:laocai.gov.vn "{loc}"',
-    f'site:congly.vn "{loc}"',
-    f'site:baovephapluat.vn "{loc}"',
-    f'site:plo.vn "{loc}"',
-    f'site:dantri.com.vn "{loc}"',
-    f'site:vietnamnet.vn "{loc}"',
-    f'site:laodong.vn "{loc}"',
-]
+        f'site:baolaocai.vn "{loc}"',
+        f'site:laocai.gov.vn "{loc}"',
+        f'site:congly.vn "{loc}"',
+        f'site:baovephapluat.vn "{loc}"',
+        f'site:plo.vn "{loc}"',
+        f'site:dantri.com.vn "{loc}"',
+        f'site:vietnamnet.vn "{loc}"',
+        f'site:laodong.vn "{loc}"',
+    ]
 
-        for query in queries:
-            try:
-                rss_url = (
-                    f"https://news.google.com/rss/search?"
-                    f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+    for query in queries:
+        try:
+            rss_url = (
+                f"https://news.google.com/rss/search?"
+                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+            )
+
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:25]:
+                content = get_article_content(entry.link)
+
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    "Google News"
                 )
 
-                feed = feedparser.parse(rss_url)
+        except Exception as e:
+            print("Google News error:", e)
 
-                for entry in feed.entries[:25]:
-                    content = get_article_content(entry.link)
 
-                    process_article(
-                        entry.title,
-                        content,
-                        entry.link,
-                        "Google News"
-                    )
-
-            except Exception as e:
-                print("Google News error:", e)
 
 
 def scan_rss():
