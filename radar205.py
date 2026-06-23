@@ -36,11 +36,7 @@ BASE_LOCATIONS = [
     "hồ Thác Bà",
 ]
 
-LOCATIONS = []
-for loc in BASE_LOCATIONS:
-    LOCATIONS.append(loc)
-    LOCATIONS.append(f"xã {loc}")
-    LOCATIONS.append(f"tỉnh {loc}")
+LOCATIONS = BASE_LOCATIONS.copy()
 
 KEYWORDS = [
     # môi trường
@@ -168,6 +164,15 @@ KEYWORDS = [
 ]
 
 RSS_SOURCES = [
+    # Lào Cai
+    "https://baolaocai.vn/rss/home.rss",
+
+    # Pháp luật
+    "https://congly.vn/rss/home.rss",
+    "https://baovephapluat.vn/rss/home.rss",
+    "https://plo.vn/rss/home.rss",
+
+    # Trung ương
     "https://vnexpress.net/rss/tin-moi-nhat.rss",
     "https://dantri.com.vn/rss/home.rss",
     "https://vietnamnet.vn/rss/home.rss",
@@ -176,17 +181,21 @@ RSS_SOURCES = [
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
     "https://nld.com.vn/rss/home.rss",
     "https://tienphong.vn/rss/home.rss",
-    "https://plo.vn/rss/home.rss",
     "https://vov.vn/rss/vov.rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://congly.vn/rss/home.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss"
+    "https://vtcnews.vn/rss/feed.rss",
+    "https://danviet.vn/rss/home.rss",
+    "https://www.vietnamplus.vn/rss/home.vnp",
+    "https://xaydung.gov.vn/rss",
+    "https://baochinhphu.vn/rss/home.rss",
+    "https://nhandan.vn/rss/home.rss",
+
+    # Bạn đọc - phản ánh
     "https://laodong.vn/rss/ban-doc.rss",
     "https://laodong.vn/rss/xa-hoi.rss",
     "https://laodong.vn/rss/moi-truong.rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
 
+    # Môi trường
+    "https://baotainguyenmoitruong.vn/rss/home.rss"
 ]
 
 # ===============================
@@ -438,21 +447,40 @@ def process_article(title, content, link, source):
 
 def scan_google_news():
     for loc in BASE_LOCATIONS:
-        queries = [
-            loc,
-            f"{loc} phản ánh",
-            f"{loc} môi trường",
-            f"{loc} ô nhiễm",
-            f"{loc} bụi",
-            f"{loc} khói bụi",
-            f"{loc} dân bức xúc",
-            f"{loc} kêu cứu",
-            f"{loc} đất đai",
-            f"{loc} trẻ em",
-            f"{loc} hộ tịch",
-            f"{loc} thực phẩm",
-            f"{loc} hàng giả"
-        ]
+queries = [
+    loc,
+    f"{loc} phản ánh",
+    f"{loc} kiến nghị",
+    f"{loc} khiếu nại",
+    f"{loc} tố cáo",
+    f"{loc} môi trường",
+    f"{loc} ô nhiễm",
+    f"{loc} xả thải",
+    f"{loc} rác thải",
+    f"{loc} đất đai",
+    f"{loc} lấn chiếm đất",
+    f"{loc} tài sản công",
+    f"{loc} khai thác khoáng sản",
+    f"{loc} khai thác cát",
+    f"{loc} khai thác sỏi",
+    f"{loc} mỏ đá",
+    f"{loc} trẻ em",
+    f"{loc} xâm hại trẻ em",
+    f"{loc} thực phẩm bẩn",
+    f"{loc} hàng giả",
+    f"{loc} lừa đảo",
+    f"{loc} tham nhũng",
+    f"{loc} ma túy",
+
+    f'site:baolaocai.vn "{loc}"',
+    f'site:laocai.gov.vn "{loc}"',
+    f'site:congly.vn "{loc}"',
+    f'site:baovephapluat.vn "{loc}"',
+    f'site:plo.vn "{loc}"',
+    f'site:dantri.com.vn "{loc}"',
+    f'site:vietnamnet.vn "{loc}"',
+    f'site:laodong.vn "{loc}"',
+]
 
         for query in queries:
             try:
