@@ -450,7 +450,8 @@ def process_article(title, content, link, source):
 
 def scan_google_news():
 for loc in BASE_LOCATIONS:
-    
+
+```
     queries = [
         loc,
         f"{loc} phản ánh",
@@ -507,9 +508,7 @@ for loc in BASE_LOCATIONS:
 
         except Exception as e:
             print("Google News error:", e)
-
-
-
+```
 
 def scan_rss():
     for rss_url in RSS_SOURCES:
