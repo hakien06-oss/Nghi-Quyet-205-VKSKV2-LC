@@ -36,11 +36,7 @@ BASE_LOCATIONS = [
     "hồ Thác Bà",
 ]
 
-LOCATIONS = []
-for loc in BASE_LOCATIONS:
-    LOCATIONS.append(loc)
-    LOCATIONS.append(f"xã {loc}")
-    LOCATIONS.append(f"tỉnh {loc}")
+LOCATIONS = BASE_LOCATIONS.copy()
 
 KEYWORDS = [
     # môi trường
@@ -186,6 +182,7 @@ RSS_SOURCES = [
     "https://laodong.vn/rss/moi-truong.rss",
     "https://baotainguyenmoitruong.vn/rss/home.rss",
     "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
+    "https://baolaocai.vn/rss/home.rss",
 
 ]
 
@@ -451,7 +448,9 @@ def scan_google_news():
             f"{loc} trẻ em",
             f"{loc} hộ tịch",
             f"{loc} thực phẩm",
-            f"{loc} hàng giả"
+            f"{loc} hàng giả",
+            f'site:baolaocai.vn "{loc}"',
+            f'site:laocai.gov.vn "{loc}"',
         ]
 
         for query in queries:
