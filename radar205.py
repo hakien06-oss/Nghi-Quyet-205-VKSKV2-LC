@@ -36,7 +36,7 @@ BASE_LOCATIONS = [
     "hồ Thác Bà",
 ]
 
-LOCATIONS = BASE_LOCATIONS.copy()
+LOCATIONS = [x.lower() for x in BASE_LOCATIONS]
 
 KEYWORDS = [
     # môi trường
@@ -305,11 +305,14 @@ def make_hash(text):
 
 
 def detect_locations(text):
-    t = text.lower()
+    text = text.lower()
+
     found = []
-    for x in LOCATIONS:
-        if x.lower() in t:
-            found.append(x)
+
+    for location in LOCATIONS:
+        if location in text:
+            found.append(location)
+
     return list(set(found))
 
 
