@@ -36,7 +36,11 @@ BASE_LOCATIONS = [
     "hồ Thác Bà",
 ]
 
-LOCATIONS = [x.lower() for x in BASE_LOCATIONS]
+LOCATIONS = []
+for loc in BASE_LOCATIONS:
+    LOCATIONS.append(loc)
+    LOCATIONS.append(f"xã {loc}")
+    LOCATIONS.append(f"tỉnh {loc}")
 
 KEYWORDS = [
     # môi trường
@@ -164,15 +168,6 @@ KEYWORDS = [
 ]
 
 RSS_SOURCES = [
-    # Lào Cai
-    "https://baolaocai.vn/rss/home.rss",
-
-    # Pháp luật
-    "https://congly.vn/rss/home.rss",
-    "https://baovephapluat.vn/rss/home.rss",
-    "https://plo.vn/rss/home.rss",
-
-    # Trung ương
     "https://vnexpress.net/rss/tin-moi-nhat.rss",
     "https://dantri.com.vn/rss/home.rss",
     "https://vietnamnet.vn/rss/home.rss",
@@ -181,21 +176,17 @@ RSS_SOURCES = [
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
     "https://nld.com.vn/rss/home.rss",
     "https://tienphong.vn/rss/home.rss",
+    "https://plo.vn/rss/home.rss",
     "https://vov.vn/rss/vov.rss",
-    "https://vtcnews.vn/rss/feed.rss",
-    "https://danviet.vn/rss/home.rss",
-    "https://www.vietnamplus.vn/rss/home.vnp",
-    "https://xaydung.gov.vn/rss",
-    "https://baochinhphu.vn/rss/home.rss",
-    "https://nhandan.vn/rss/home.rss",
-
-    # Bạn đọc - phản ánh
+    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://congly.vn/rss/home.rss",
+    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
     "https://laodong.vn/rss/ban-doc.rss",
     "https://laodong.vn/rss/xa-hoi.rss",
     "https://laodong.vn/rss/moi-truong.rss",
+    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
 
-    # Môi trường
-    "https://baotainguyenmoitruong.vn/rss/home.rss"
 ]
 
 # ===============================
@@ -305,14 +296,11 @@ def make_hash(text):
 
 
 def detect_locations(text):
-    text = text.lower()
-
+    t = text.lower()
     found = []
-
-    for location in LOCATIONS:
-        if location in text:
-            found.append(location)
-
+    for x in LOCATIONS:
+        if x.lower() in t:
+            found.append(x)
     return list(set(found))
 
 
@@ -449,66 +437,45 @@ def process_article(title, content, link, source):
 # ===============================
 
 def scan_google_news():
-for loc in BASE_LOCATIONS:
+    for loc in BASE_LOCATIONS:
+        queries = [
+            loc,
+            f"{loc} phản ánh",
+            f"{loc} môi trường",
+            f"{loc} ô nhiễm",
+            f"{loc} bụi",
+            f"{loc} khói bụi",
+            f"{loc} dân bức xúc",
+            f"{loc} kêu cứu",
+            f"{loc} đất đai",
+            f"{loc} trẻ em",
+            f"{loc} hộ tịch",
+            f"{loc} thực phẩm",
+            f"{loc} hàng giả"
+        ]
 
-```
-    queries = [
-        loc,
-        f"{loc} phản ánh",
-        f"{loc} kiến nghị",
-        f"{loc} khiếu nại",
-        f"{loc} tố cáo",
-        f"{loc} môi trường",
-        f"{loc} ô nhiễm",
-        f"{loc} xả thải",
-        f"{loc} rác thải",
-        f"{loc} đất đai",
-        f"{loc} lấn chiếm đất",
-        f"{loc} tài sản công",
-        f"{loc} khai thác khoáng sản",
-        f"{loc} khai thác cát",
-        f"{loc} khai thác sỏi",
-        f"{loc} mỏ đá",
-        f"{loc} trẻ em",
-        f"{loc} xâm hại trẻ em",
-        f"{loc} thực phẩm bẩn",
-        f"{loc} hàng giả",
-        f"{loc} lừa đảo",
-        f"{loc} tham nhũng",
-        f"{loc} ma túy",
-
-        f'site:baolaocai.vn "{loc}"',
-        f'site:laocai.gov.vn "{loc}"',
-        f'site:congly.vn "{loc}"',
-        f'site:baovephapluat.vn "{loc}"',
-        f'site:plo.vn "{loc}"',
-        f'site:dantri.com.vn "{loc}"',
-        f'site:vietnamnet.vn "{loc}"',
-        f'site:laodong.vn "{loc}"',
-    ]
-
-    for query in queries:
-        try:
-            rss_url = (
-                f"https://news.google.com/rss/search?"
-                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
-            )
-
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:25]:
-                content = get_article_content(entry.link)
-
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    "Google News"
+        for query in queries:
+            try:
+                rss_url = (
+                    f"https://news.google.com/rss/search?"
+                    f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
                 )
 
-        except Exception as e:
-            print("Google News error:", e)
-```
+                feed = feedparser.parse(rss_url)
+
+                for entry in feed.entries[:25]:
+                    content = get_article_content(entry.link)
+
+                    process_article(
+                        entry.title,
+                        content,
+                        entry.link,
+                        "Google News"
+                    )
+
+            except Exception as e:
+                print("Google News error:", e)
+
 
 def scan_rss():
     for rss_url in RSS_SOURCES:
