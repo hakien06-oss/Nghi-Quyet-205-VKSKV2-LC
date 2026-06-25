@@ -164,24 +164,207 @@ KEYWORDS = [
 ]
 
 RSS_SOURCES = [
-    "https://vnexpress.net/rss/tin-moi-nhat.rss",
+   # ===== Báo điện tử tổng hợp =====
+    "https://vnexpress.net/rss",
     "https://dantri.com.vn/rss/home.rss",
     "https://vietnamnet.vn/rss/home.rss",
-    "https://laodong.vn/rss/home.rss",
     "https://thanhnien.vn/rss/home.rss",
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
-    "https://nld.com.vn/rss/home.rss",
+    "https://laodong.vn/rss/home.rss",
     "https://tienphong.vn/rss/home.rss",
-    "https://plo.vn/rss/home.rss",
-    "https://vov.vn/rss/vov.rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://nld.com.vn/rss/home.rss",
+    "https://danviet.vn/rss/home.rss",
+
+    # ===== Cơ quan báo chí Trung ương =====
+    "https://nhandan.vn/rss/home.rss",
+    "https://www.vietnamplus.vn/rss/home.rss",
+    "https://baotintuc.vn/tin-moi-nhat.rss",
+    "https://baochinhphu.vn/rss/home.rss",
+    "https://vov.vn/rss/home.rss",
+    "https://vtv.vn/rss/home.rss",
+
+    # ===== Đối ngoại =====
+    "https://baoquocte.vn/rss/home.rss",
+    "https://daidoanket.vn/rss/home.rss",
+
+    # ===== Pháp luật =====
+    "https://cand.com.vn/rss/home.rss",
+    "https://baovephapluat.vn/rss/home.rss",
     "https://congly.vn/rss/home.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
-    "https://laodong.vn/rss/ban-doc.rss",
-    "https://laodong.vn/rss/xa-hoi.rss",
-    "https://laodong.vn/rss/moi-truong.rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
+    "https://baophapluat.vn/rss/home.rss",
+    "https://plo.vn/rss/home.rss",
+
+    # ===== Chính trị - Đảng =====
+    "https://xaydungdang.org.vn/rss",
+    "https://tapchicongsan.org.vn/rss",
+
+    # ===== Quân đội =====
+    "https://qdnd.vn/rss",
+ # ===== Môi trường =====
+    "https://moitruong.net.vn/rss",
+    "https://tainguyenvamoitruong.vn/rss/home.rss",
+
+    # ===== Nông nghiệp - Môi trường =====
+    "https://nongnghiepmoitruong.vn/rss/home.rss",
+
+    # ===== Tài nguyên nước - Khoáng sản =====
+    "https://tapchimoitruong.vn/rss",
+    "https://moitruongvadothi.vn/rss",
+
+    # ===== Biến đổi khí hậu =====
+    "https://vacne.org.vn/rss",
+
+    # ===== Khoa học môi trường =====
+    "https://khoahocdoisong.vn/rss/home.rss",
+
+    # ===== Chất lượng - Tiêu chuẩn =====
+    "https://vietq.vn/rss",
+
+    # ===== Năng lượng =====
+    "https://nangluongsachvietnam.vn/rss",
+
+    # ===== Đô thị =====
+    "https://kinhtedothi.vn/rss/home.rss",
+
+    # ===== Xây dựng =====
+    "https://baoxaydung.com.vn/rss/home.rss",
+
+    # ===== Giao thông =====
+    "https://baogiaothong.vn/rss/home.rss",
+
+    # ===== Hải quan =====
+    "https://haiquanonline.com.vn/rss/home.rss",
+
+    # ===== Công Thương =====
+    "https://congthuong.vn/rss/home.rss",
+
+    # ===== Doanh nghiệp =====
+    "https://diendandoanhnghiep.vn/rss/home.rss",
+
+    # ===== Tài chính =====
+    "https://tapchitaichinh.vn/rss",
+
+    # ===== Kinh tế xanh =====
+    "https://vneconomy.vn/rss.html",
+
+    # ===== Sức khỏe =====
+    "https://suckhoedoisong.vn/rss/home.rss",
+
+    # ===== Pháp luật =====
+    "https://baophapluat.vn/rss/home.rss",
+    "https://cand.com.vn/rss/home.rss",
+    "https://baovephapluat.vn/rss/home.rss",
+     # ===== Kinh tế - Tài chính =====
+    "https://baodautu.vn/rss/home.rss",
+    "https://cafef.vn/rss.chn",
+    "https://cafebiz.vn/rss.chn",
+    "https://vneconomy.vn/rss.html",
+    "https://vietnamfinance.vn/rss/home.rss",
+    "https://mekongasean.vn/rss",
+    "https://congthuong.vn/rss/home.rss",
+    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
+    "https://diendandoanhnghiep.vn/rss/home.rss",
+    "https://haiquanonline.com.vn/rss/home.rss",
+    "https://kinhtedothi.vn/rss/home.rss",
+    "https://doanhnghiepvn.vn/rss/home.rss",
+    "https://thuonghieucongluan.com.vn/rss/home.rss",
+    "https://vietq.vn/rss",
+    "https://tapchitaichinh.vn/rss",
+
+    # ===== Công nghệ =====
+    "https://genk.vn/rss.chn",
+
+    # ===== Khoa học - Giáo dục =====
+    "https://khoahocdoisong.vn/rss/home.rss",
+    "https://giaoducthoidai.vn/rss/home.rss",
+
+    # ===== Y tế - Môi trường =====
+    "https://suckhoedoisong.vn/rss/home.rss",
+    "https://moitruong.net.vn/rss",
+    "https://tainguyenvamoitruong.vn/rss/home.rss",
+
+    # ===== Xã hội =====
+    "https://doisongphapluat.com/rss/home.rss",
+    "https://giadinh.suckhoedoisong.vn/rss/home.rss",
+
+    # ===== Tin nhanh - Tổng hợp =====
+    "https://soha.vn/rss/home.rss",
+    "https://kenh14.vn/rss.chn",
+    "https://1thegioi.vn/rss",
+    "https://kienthuc.net.vn/rss/home.rss",
+    "https://nguoiduatin.vn/rss/home.rss",
+    "https://www.24h.com.vn/upload/rss/trangchu24h.rss",
+     "https://congbao.chinhphu.vn/cac-van-ban-moi-ban-hanh.rss",
+    "https://congbao.chinhphu.vn/cac-so-cong-bao-moi-dang.rss",
+
+    # ==========================================
+    # BỘ CÔNG AN
+    # ==========================================
+
+    "https://www.mps.gov.vn/rss",
+
+    # ==========================================
+    # KIỂM SÁT - TÒA ÁN
+    # ==========================================
+
+    "https://baovephapluat.vn/rss/home.rss",
+
+    # ==========================================
+    # MÔI TRƯỜNG - TÀI NGUYÊN
+    # ==========================================
+
+    "https://moitruong.net.vn/rss",
+    "https://tainguyenvamoitruong.vn/rss/home.rss",
+    "https://nongnghiepmoitruong.vn/rss/home.rss",
+    "https://tapchimoitruong.vn/rss",
+    "https://moitruongvadothi.vn/rss",
+
+    # ==========================================
+    # NÔNG NGHIỆP - LÂM NGHIỆP
+    # ==========================================
+
+    "https://nongnghiep.vn/rss/home.rss",
+    "https://vacne.org.vn/rss",
+
+    # ==========================================
+    # XÂY DỰNG - QUY HOẠCH
+    # ==========================================
+
+    "https://baoxaydung.com.vn/rss/home.rss",
+    "https://xaydungchinhsach.chinhphu.vn/rss",
+    "https://kinhtedothi.vn/rss/home.rss",
+
+    # ==========================================
+    # GIAO THÔNG
+    # ==========================================
+
+    "https://baogiaothong.vn/rss/home.rss",
+
+    # ==========================================
+    # CÔNG THƯƠNG
+    # ==========================================
+
+    "https://congthuong.vn/rss/home.rss",
+
+    # ==========================================
+    # HẢI QUAN - THUẾ
+    # ==========================================
+
+    "https://haiquanonline.com.vn/rss/home.rss",
+    "https://tapchitaichinh.vn/rss",
+
+    # ==========================================
+    # KHOA HỌC
+    # ==========================================
+
+    "https://khoahocdoisong.vn/rss/home.rss",
+    "https://vietq.vn/rss",
+
+    # ==========================================
+    # Y TẾ
+    # ==========================================
+
+    "https://suckhoedoisong.vn/rss/home.rss",
     "https://baolaocai.vn/rss/home.rss",
 
 ]
