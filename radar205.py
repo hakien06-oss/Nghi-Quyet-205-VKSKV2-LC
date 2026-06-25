@@ -32,13 +32,14 @@ RULE_ENGINE = {
     "Môi trường & Sinh thái": {
         "score": 25,
         "is_nq205": True,
-        "keywords": ["ô nhiễm", "đổ rác bừa bãi", "hôi", "bột đá", "xả thải", "bụi bặm", "khói", "đá văng", "nước thải", "bụi mù mịt", "khói bụi", "rác thải", "mùi hôi", "bụi trắng", "môi trường"],
+        "keywords": ["ô nhiễm", "đổ rác bừa bãi", "hôi", "bột đá", "xả thải", "bụi bặm", "khói", "đá văng", "nước đục", "cá chết", "suối", "nước hồ", "nước sông", "nước thải", "bụi mù mịt", "khói bụi", "rác thải", "mùi hôi", "bụi trắng", "môi trường"],
         "hint": "Cần xác minh mức độ ảnh hưởng đến cộng đồng dân cư xung quanh (NQ205)."
     },
     "Quản lý Đất đai & Tài nguyên": {
         "score": 25,
         "is_nq205": True,
-        "keywords": ["lấn chiếm đất", "đất công", "khai thác khoáng sản", "mỏ đá", "khai thác cát", "san gạt", "đất rừng", "sạt lở", "tài sản công", "phá rừng", "đất đai"],
+        "keywords": ["lấn chiếm đất", "đất công", "khai thác khoáng sản", "mỏ đá", "khai thác cát", "san gạt", "vật liệu xây dựng", "đất hiếm", 
+            "đào đất", "đào núi", "nổ mìn", "đập đá", "máy nghiền", "đất rừng", "sạt lở", "tài sản công", "phá rừng", "đất đai"],
         "hint": "Kiểm tra tính pháp lý của dự án, ranh giới cấp phép và thiệt hại tài nguyên (NQ205)."
     },
     "Bảo vệ Nhóm yếu thế": {
