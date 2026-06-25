@@ -24,8 +24,7 @@ SUBSCRIBERS_FILE = "subscribers.json"
 UPDATES_FILE = "telegram_updates.json"
 
 EXACT_LOCATIONS = [
-    "Lào Cai", 
-    "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
+    "Lào Cai", "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
     "Mường Lai", "xã Yên Bình", "Thác Bà", "hồ Thác Bà", 
     "Cảm Nhân", "Lục Yên", "xã Yên Thành", "Tân Lĩnh", "huyện Yên Bình", "Yên Bái"
 ]
@@ -83,4 +82,82 @@ RSS_SOURCES = [
     "https://congly.vn/rss/home.rss", "https://baophapluat.vn/rss/home.rss", "https://baovephapluat.vn/rss/home.rss",
     "https://cand.com.vn/rss/su-kien-binh-luan-chu-diem/", "https://nhandan.vn/rss/phap-luat.rss",
     "https://baochinhphu.vn/Rss/xa-hoi.rss", "https://baotintuc.vn/phap-luat.rss", "https://congthuong.vn/rss/phap-luat.rss",
-    "https://baoxaydung.com.vn/rss/home.rss", "https://baogiaothong.vn/rss/home.rss", "
+    "https://baoxaydung.com.vn/rss/home.rss", "https://baogiaothong.vn/rss/home.rss", "https://daidoanket.vn/rss/phap-luat.rss",
+    "https://vneconomy.vn/rss/home.rss", "https://cafef.vn/trang-chu.rss", "https://cafebiz.vn/trang-chu.rss",
+    "https://vietnamfinance.vn/rss/home.rss", "https://baodautu.vn/rss/phap-luat.rss", "https://diendandoanhnghiep.vn/rss/home.rss",
+    "https://thoibaotaichinhvietnam.vn/rss/home.rss", "https://nguoiquansat.vn/rss/home.rss", "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://moitruongvadothi.vn/rss/home.rss", "https://nongnghiep.vn/rss/home.rss", "https://khoahocdoisong.vn/rss/home.rss",
+    "https://vietq.vn/rss/home.rss", "https://suckhoedoisong.vn/rss/home.rss", "https://moitruong.net.vn/rss",
+    "https://tainguyenvamoitruong.vn/rss/home.rss", "https://soha.vn/thoi-su.rss", "https://www.24h.com.vn/upload/rss/tintuctrongngay.rss",
+    "https://kenh14.vn/xa-hoi.rss", "https://kienthuc.net.vn/rss/xa-hoi.rss", "https://www.nguoiduatin.vn/rss/trang-chu.rss",
+    "https://1thegioi.vn/rss/home.rss", "https://doisongphapluat.com/rss/home.rss", "https://baolaocai.vn/rss/home.rss"
+]
+
+# ===============================
+# LOGIC
+# ===============================
+file_lock = threading.Lock()
+new_articles_found = 0
+
+def load_json(f, d): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else d
+def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"))
+
+def broadcast(m):
+    for id in load_json(SUBSCRIBERS_FILE, []):
+        try: requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": id, "text": m[:4000]})
+        except: continue
+
+def process_article(title, content, link, source):
+    global new_articles_found
+    full = f"{title} {content}".lower()
+    locs = [l for l in EXACT_LOCATIONS if l.lower() in full]
+    if not locs: return
+
+    score, kws, doms, hints, nq205 = len(locs)*25, [], [], [], False
+    for d, r in RULE_ENGINE.items():
+        matched = False
+        for k in r["keywords"]:
+            if k.lower() in full:
+                if k not in kws: kws.append(k)
+                score += r["score"]
+                matched = True
+        if matched:
+            doms.append(d); hints.append(r["hint"])
+            if r["is_nq205"]: nq205 = True
+
+    if score < 45: return
+    key = hashlib.md5(title.lower()[:80].encode()).hexdigest()
+    with file_lock:
+        cache = set(load_json(CACHE_FILE, []))
+        if key in cache: return
+        cache.add(key); save_json(CACHE_FILE, list(cache))
+        new_articles_found += 1
+
+    lvl = "🔴 RẤT CAO" if score >= 80 else "🟠 CAO" if score >= 60 else "🟡 TRUNG BÌNH"
+    alert = (f"🚨 CẢNH BÁO NGUỒN TIN - {lvl}\n\n📍 Địa bàn: {', '.join(sorted(set(locs)))}\n"
+             f"🔍 Lĩnh vực: {', '.join(sorted(set(doms)))}\n📈 Điểm AI: {score}\n\n"
+             f"🧠 NHẬN ĐỊNH: {'✓ NQ 205' if nq205 else 'Khác'}\n✓ Gợi ý: {' '.join(set(hints))}\n\n"
+             f"📰 {title}\n🔗 {link}")
+    broadcast(alert)
+
+def process_single_feed(feed_info):
+    url, name = feed_info
+    time.sleep(random.uniform(1.0, 3.0))
+    try:
+        f = feedparser.parse(url)
+        for e in f.entries[:25]:
+            c = getattr(e, "summary", "") + getattr(e, "description", "")
+            process_article(e.title, c, e.link, name)
+    except: pass
+
+if __name__ == "__main__":
+    tasks = [(u, "RSS") for u in RSS_SOURCES]
+    for l in EXACT_LOCATIONS:
+        for k in GOOGLE_QUERIES:
+            u = f"https://news.google.com/rss/search?q={quote(f'{l} {k}')}&hl=vi&gl=VN&ceid=VN:vi"
+            tasks.append((u, "Google News"))
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exec:
+        exec.map(process_single_feed, list(set(tasks)))
+    
+    broadcast(f"✅ Đã xử lý {new_articles_found} thông tin mới." if new_articles_found > 0 else "📭 Không có tin mới.")
