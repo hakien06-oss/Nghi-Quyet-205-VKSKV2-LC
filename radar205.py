@@ -1,6 +1,8 @@
 import os
 import json
 import hashlib
+import concurrent.futures
+import threading
 from datetime import datetime
 from urllib.parse import quote
 
@@ -24,7 +26,7 @@ EXACT_LOCATIONS = [
     "Lào Cai", 
     "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
     "Mường Lai", "xã Yên Bình", "Thác Bà", "hồ Thác Bà", 
-    "Cảm Nhân", "Lục Yên", "xã Yên Thành", "Tân Lĩnh", "huyện Yên Bình", "Yên Bái",
+    "Cảm Nhân", "Lục Yên", "xã Yên Thành", "Tân Lĩnh", "huyện Yên Bình", "Yên Bái"
 ]
 
 # TẬP TRUNG TỐI ĐA VÀO NGHỊ QUYẾT 205 - LOẠI BỎ HÌNH SỰ THUẦN TÚY
@@ -50,7 +52,7 @@ RULE_ENGINE = {
     },
     "Tham nhũng & Lợi ích công": {
         "score": 15,
-        "is_nq205": True, # Xét dưới góc độ thất thoát tài sản nhà nước/lợi ích công cộng
+        "is_nq205": True,
         "keywords": ["tham nhũng", "nhận hối lộ", "tham ô", "lừa đảo", "chiếm đoạt tài sản", "cán bộ vòi tiền"],
         "hint": "Nghiên cứu hồ sơ xem có yếu tố khởi kiện dân sự đòi bồi thường thiệt hại cho Nhà nước không (NQ205)."
     },
@@ -68,71 +70,83 @@ RULE_ENGINE = {
     }
 }
 
-# DANH SÁCH TỪ KHÓA CHO GOOGLE NEWS (Trích xuất để tối ưu request)
 GOOGLE_QUERIES = [
     "ô nhiễm", "khai thác khoáng sản", "mỏ đá", "đất đai", 
-    "lấn chiếm", "xả thải", "phá rừng", "vi phạm", "sạt lở", "xả rác", "chưa có căn cước", "giấy khai sinh", "bạo lực", "khói bụi", "ô nhiễm",
-    "ô nhiễm môi trường",
-    "ô nhiễm không khí",
-    "ô nhiễm nguồn nước",
-    
+    "lấn chiếm", "xả thải", "phá rừng", "vi phạm", "sạt lở", "bức xúc",
+    "site:thanhtra.gov.vn",
+    "site:vksndtc.gov.vn",
+    "site:tandtc.gov.vn",
+    "site:bocongan.gov.vn",
+    "site:moj.gov.vn" 
 ]
 
-# ĐÃ MỞ RỘNG DANH SÁCH RSS (Có thể tiếp tục dán thêm để đạt 100-120 nguồn)
 RSS_SOURCES = [
-    # Nhóm Báo Đảng & Chính trị - Pháp luật
-    "https://baolaocai.vn/rss/home.rss",
-    "https://nhandan.vn/rss/phap-luat.rss",
-    "https://nhandan.vn/rss/ban-doc.rss",
-    "https://baochinhphu.vn/Rss/xa-hoi.rss",
-    "https://congly.vn/rss/home.rss",
-    "https://congly.vn/rss/phap-luat.rss",
-    "https://congly.vn/rss/ban-doc.rss",
-    "https://baophapluat.vn/rss/home.rss",
-    "https://baophapluat.vn/rss/ban-doc.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://baotainguyenmoitruong.vn/rss/ban-doc.rss",
-    "https://baotainguyenmoitruong.vn/rss/phap-luat.rss",
-    "https://baotintuc.vn/phap-luat.rss",
-    
-    # Nhóm Báo Phổ thông & Xã hội
     "https://vnexpress.net/rss/tin-moi-nhat.rss",
-    "https://vnexpress.net/rss/phap-luat.rss",
     "https://dantri.com.vn/rss/home.rss",
-    "https://dantri.com.vn/rss/phap-luat.rss",
-    "https://dantri.com.vn/rss/ban-doc.rss",
     "https://vietnamnet.vn/rss/home.rss",
-    "https://vietnamnet.vn/rss/phap-luat.rss",
-    "https://vietnamnet.vn/rss/ban-doc.rss",
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
-    "https://tuoitre.vn/rss/phap-luat.rss",
-    "https://tuoitre.vn/rss/ban-doc.rss",
     "https://thanhnien.vn/rss/home.rss",
-    "https://thanhnien.vn/rss/phap-luat.rss",
     "https://laodong.vn/rss/home.rss",
-    "https://laodong.vn/rss/phap-luat.rss",
-    "https://laodong.vn/rss/ban-doc.rss",
-    "https://laodong.vn/rss/moi-truong.rss",
     "https://nld.com.vn/rss/home.rss",
-    "https://nld.com.vn/rss/phap-luat.rss",
-    "https://nld.com.vn/rss/ban-doc.rss",
     "https://tienphong.vn/rss/home.rss",
-    "https://tienphong.vn/rss/phap-luat.rss",
     "https://plo.vn/rss/home.rss",
-    "https://plo.vn/rss/phap-luat.rss",
-    "https://plo.vn/rss/ban-doc.rss",
-    "https://vov.vn/rss/vov.rss",
-    "https://vov.vn/rss/phap-luat.rss",
+    "https://congly.vn/rss/home.rss",
+    "https://baophapluat.vn/rss/home.rss",
+    "https://baovephapluat.vn/rss/home.rss",
+    "https://cand.com.vn/rss/su-kien-binh-luan-chu-diem/",
+    "https://nhandan.vn/rss/phap-luat.rss",
+    "https://baochinhphu.vn/Rss/xa-hoi.rss",
+    "https://baotintuc.vn/phap-luat.rss",
+    "https://congthuong.vn/rss/phap-luat.rss",
+    "https://baoxaydung.com.vn/rss/home.rss",
+    "https://baogiaothong.vn/rss/home.rss",
+    "https://daidoanket.vn/rss/phap-luat.rss",
+    "https://vneconomy.vn/rss/home.rss",
+    "https://cafef.vn/trang-chu.rss",
+    "https://cafebiz.vn/trang-chu.rss",
+    "https://vietnamfinance.vn/rss/home.rss",
+    "https://baodautu.vn/rss/phap-luat.rss",
+    "https://diendandoanhnghiep.vn/rss/home.rss",
+    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
+    "https://nguoiquansat.vn/rss/home.rss",
+    "https://cafebiz.vn/rss.chn",
+    "https://vneconomy.vn/rss.html",
+    "https://vietnamfinance.vn/rss/home.rss",
+    "https://mekongasean.vn/rss",
+    "https://congthuong.vn/rss/home.rss",
+    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
+    "https://diendandoanhnghiep.vn/rss/home.rss",
+    "https://haiquanonline.com.vn/rss/home.rss",
+    "https://kinhtedothi.vn/rss/home.rss",
+    "https://doanhnghiepvn.vn/rss/home.rss",
+    "https://thuonghieucongluan.com.vn/rss/home.rss",
+    "https://vietq.vn/rss",
+    "https://tapchitaichinh.vn/rss",
     "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
-    "https://baolaocai.vn/rss/home.rss",
-
+    "https://moitruongvadothi.vn/rss/home.rss",
+    "https://nongnghiep.vn/rss/home.rss",
+    "https://khoahocdoisong.vn/rss/home.rss",
+    "https://vietq.vn/rss/home.rss",
+    "https://suckhoedoisong.vn/rss/home.rss",
+    "https://moitruong.net.vn/rss",
+    "https://tainguyenvamoitruong.vn/rss/home.rss",
+    "https://soha.vn/thoi-su.rss",
+    "https://www.24h.com.vn/upload/rss/tintuctrongngay.rss",
+    "https://kenh14.vn/xa-hoi.rss",
+    "https://kienthuc.net.vn/rss/xa-hoi.rss",
+    "https://www.nguoiduatin.vn/rss/trang-chu.rss",
+    "https://1thegioi.vn/rss/home.rss",
+    "https://doisongphapluat.com/rss/home.rss",
+    "https://giadinh.suckhoedoisong.vn/rss/home.rss",
+    "https://www.24h.com.vn/upload/rss/trangchu24h.rss",
+    "https://baolaocai.vn/rss/home.rss"
 ]
 
 # ===============================
-# FILE HELPERS
+# FILE HELPERS & THREAD LOCK
 # ===============================
+
+file_lock = threading.Lock()
 
 def load_json(file_name, default):
     if os.path.exists(file_name):
@@ -143,11 +157,9 @@ def load_json(file_name, default):
             return default
     return default
 
-
 def save_json(file_name, data):
     with open(file_name, "w", encoding="utf-8") as f:
         json.dump(data, f)
-
 
 sent_cache = set(load_json(CACHE_FILE, []))
 subscribers = load_json(SUBSCRIBERS_FILE, [])
@@ -174,11 +186,9 @@ def send_message(chat_id, message):
     except Exception as e:
         print("Telegram error:", e)
 
-
 def broadcast(message):
     for chat_id in subscribers:
         send_message(chat_id, message)
-
 
 def get_updates():
     offset = telegram_updates.get("offset", 0)
@@ -204,22 +214,25 @@ def get_updates():
                 continue
 
             if text == "/start":
-                if chat_id not in subscribers:
-                    subscribers.append(chat_id)
-                    save_json(SUBSCRIBERS_FILE, subscribers)
+                with file_lock:
+                    if chat_id not in subscribers:
+                        subscribers.append(chat_id)
+                        save_json(SUBSCRIBERS_FILE, subscribers)
                 send_message(
                     chat_id,
                     "✅ Chào mừng bạn đã đăng ký nhận thông tin cảnh báo từ hệ thống AI Radar205."
                 )
             elif text == "/stop":
-                if chat_id in subscribers and chat_id != ADMIN_CHAT_ID:
-                    subscribers.remove(chat_id)
-                    save_json(SUBSCRIBERS_FILE, subscribers)
+                with file_lock:
+                    if chat_id in subscribers and chat_id != ADMIN_CHAT_ID:
+                        subscribers.remove(chat_id)
+                        save_json(SUBSCRIBERS_FILE, subscribers)
                 send_message(chat_id, "⛔ Bạn đã hủy đăng ký nhận cảnh báo.")
     except Exception as e:
         print("Update error:", e)
 
-    save_json(UPDATES_FILE, telegram_updates)
+    with file_lock:
+        save_json(UPDATES_FILE, telegram_updates)
 
 # ===============================
 # HELPERS
@@ -258,13 +271,13 @@ def process_article(title, content, link, source):
 
     full = f"{title} {content}".lower()
 
-    # 1. HARD FILTER: Loại bỏ ngay nếu không tìm thấy tên địa bàn trong EXACT_LOCATIONS
+    # 1. HARD FILTER
     matched_locations = [loc for loc in EXACT_LOCATIONS if loc.lower() in full]
     if not matched_locations:
         return
 
-    # 2. SCORING & CATEGORIZATION BẰNG RULE_ENGINE
-    score = len(matched_locations) * 25 # Trọng số địa bàn ưu tiên cao
+    # 2. SCORING & CATEGORIZATION (Khớp chính xác - Không dùng Fuzzy Match)
+    score = len(matched_locations) * 25
     matched_keywords = []
     matched_domains = []
     hints = []
@@ -274,29 +287,32 @@ def process_article(title, content, link, source):
         domain_matched = False
         for kw in rules["keywords"]:
             if kw.lower() in full:
-                matched_keywords.append(kw)
+                if kw not in matched_keywords:
+                    matched_keywords.append(kw)
                 score += rules["score"]
                 domain_matched = True
         
-        # Nếu bài viết chạm vào từ khóa của lĩnh vực này
         if domain_matched:
-            matched_domains.append(domain)
-            hints.append(rules["hint"])
+            if domain not in matched_domains:
+                matched_domains.append(domain)
+            if rules["hint"] not in hints:
+                hints.append(rules["hint"])
             if rules["is_nq205"]:
                 is_nq205_flag = True
 
-    # 3. NGƯỠNG LỌC (Tăng lên 45 để loại triệt để tin rác)
+    # 3. NGƯỠNG LỌC CỨNG (Loại bỏ triệt để tin rác)
     if score < 45:
         return
 
-    # 4. CHỐNG TRÙNG LẶP (Dựa trên 80 ký tự đầu của Tiêu đề)
+    # 4. CHỐNG TRÙNG LẶP & LƯU CACHE (Bảo vệ bằng Thread Lock)
     key = make_hash(title.lower()[:80])
-    if key in sent_cache:
-        return
+    with file_lock:
+        if key in sent_cache:
+            return
 
-    sent_cache.add(key)
-    save_json(CACHE_FILE, list(sent_cache))
-    new_articles_found += 1
+        sent_cache.add(key)
+        save_json(CACHE_FILE, list(sent_cache))
+        new_articles_found += 1
 
     # 5. PHÂN LOẠI MỨC ĐỘ
     if score >= 80:
@@ -308,10 +324,9 @@ def process_article(title, content, link, source):
     else:
         level = "🟢 THẤP"
 
-    # 6. ĐỊNH DẠNG CẢNH BÁO AN TOÀN CHO GITHUB ACTIONS
+    # 6. ĐỊNH DẠNG CẢNH BÁO AN TOÀN TRÊN GITHUB ACTIONS
     time_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
     
-    # Lọc trùng lặp danh sách hiển thị
     loc_str = ", ".join(sorted(set(matched_locations)))
     kw_str = ", ".join(sorted(set(matched_keywords)))
     domain_str = ", ".join(sorted(set(matched_domains)))
@@ -336,83 +351,45 @@ def process_article(title, content, link, source):
     broadcast(alert)
 
 # ===============================
-# SCANNERS
+# MULTITHREADING SCANNERS
 # ===============================
 
-def scan_google_news():
-    queries = []
+def process_single_feed(feed_info):
+    url, source_name = feed_info
+    try:
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:25]:
+            content = getattr(entry, "summary", "") + getattr(entry, "description", "")
+            if len(content) < 100: 
+                content = get_article_content(entry.link)
+            process_article(entry.title, content, entry.link, source_name)
+    except Exception:
+        pass
+
+def run_scanners_concurrently():
+    tasks = []
+    
+    # 1. Thêm nguồn RSS
+    for url in RSS_SOURCES:
+        tasks.append((url, "RSS Báo chí"))
+        
+    # 2. Thêm nguồn Google News Địa phương
     for loc in EXACT_LOCATIONS:
         for kw in GOOGLE_QUERIES:
-            queries.append(f"{loc} {kw}")
+            if not kw.startswith("site:"):
+                query = f"{loc} {kw}"
+                rss_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+                tasks.append((rss_url, "Google News"))
+                
+    # 3. Thêm nguồn Google News Lưới vét Cổng thông tin
+    for kw in GOOGLE_QUERIES:
+        if kw.startswith("site:"):
+            rss_url = f"https://news.google.com/rss/search?q={quote(kw)}&hl=vi&gl=VN&ceid=VN:vi"
+            tasks.append((rss_url, "Google News (Cổng TTĐT)"))
 
-    for query in queries:
-        try:
-            rss_url = (
-                f"https://news.google.com/rss/search?"
-                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
-            )
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:25]:
-                content = ""
-                if hasattr(entry, "summary"):
-                    content += entry.summary
-                if hasattr(entry, "description"):
-                    content += entry.description
-                if len(content) < 100:
-                    content = get_article_content(entry.link)
-
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    "Google News"
-                )
-        except Exception as e:
-            print("Google News error:", e)
-
-def scan_google_news_all():
-    for query in GOOGLE_QUERIES:
-        try:
-            rss_url = (
-                f"https://news.google.com/rss/search?"
-                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
-            )
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:25]:
-                content = entry.summary if hasattr(entry, "summary") else ""
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    "Google RSS"
-                )
-        except Exception as e:
-            print("Google News All error:", e)
-
-def scan_rss():
-    for rss_url in RSS_SOURCES:
-        try:
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:25]:
-                content = ""
-                if hasattr(entry, "summary"):
-                    content += entry.summary
-                if hasattr(entry, "description"):
-                    content += entry.description
-                if len(content) < 100:
-                    content = get_article_content(entry.link)
-
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    rss_url
-                )
-        except Exception as e:
-            print("RSS error:", e)
+    # Khởi chạy đa luồng với 15 workers (siêu tốc)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        executor.map(process_single_feed, tasks)
 
 # ===============================
 # MAIN
@@ -427,11 +404,9 @@ def run():
         print("No subscribers.")
         return
 
-    broadcast("🔎 RADAR205 bắt đầu rà soát thông tin hệ thống hôm nay...")
+    broadcast("🔎 RADAR205 bắt đầu rà soát thông tin hệ thống đa luồng...")
 
-    scan_google_news()
-    scan_google_news_all()
-    scan_rss()
+    run_scanners_concurrently()
 
     if new_articles_found == 0:
         broadcast(
@@ -439,7 +414,7 @@ def run():
             "Hệ thống tự động tiếp tục chế độ trực chiến."
         )
     else:
-        broadcast(f"✅ Hoàn thành rà soát. Phát hiện và xử lý {new_articles_found} thông tin mới.")
+        broadcast(f"✅ Hoàn thành rà soát siêu tốc. Phát hiện và xử lý {new_articles_found} thông tin mới.")
 
 if __name__ == "__main__":
     run()
