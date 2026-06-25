@@ -1,10 +1,10 @@
 import os
 import json
 import hashlib
-import time
-import random
 import concurrent.futures
 import threading
+import time
+import random
 from datetime import datetime
 from urllib.parse import quote
 
@@ -23,7 +23,6 @@ CACHE_FILE = "radar205_cache.json"
 SUBSCRIBERS_FILE = "subscribers.json"
 UPDATES_FILE = "telegram_updates.json"
 
-# ĐIỀU KIỆN LỌC CỨNG (HARD FILTER) - Chỉ quét chính xác trong các khu vực này
 EXACT_LOCATIONS = [
     "Lào Cai", 
     "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
@@ -31,7 +30,6 @@ EXACT_LOCATIONS = [
     "Cảm Nhân", "Lục Yên", "xã Yên Thành", "Tân Lĩnh", "huyện Yên Bình", "Yên Bái"
 ]
 
-# TẬP TRUNG TỐI ĐA VÀO NGHỊ QUYẾT 205 - LOẠI BỎ HÌNH SỰ THUẦN TÚY
 RULE_ENGINE = {
     "Môi trường & Sinh thái": {
         "score": 25,
@@ -75,61 +73,14 @@ RULE_ENGINE = {
 GOOGLE_QUERIES = [
     "ô nhiễm", "khai thác khoáng sản", "mỏ đá", "đất đai", 
     "lấn chiếm", "xả thải", "phá rừng", "vi phạm", "sạt lở", "bức xúc",
-    "site:thanhtra.gov.vn",
-    "site:vksndtc.gov.vn",
-    "site:tandtc.gov.vn",
-    "site:bocongan.gov.vn",
-    "site:moj.gov.vn" 
+    "site:thanhtra.gov.vn", "site:vksndtc.gov.vn", "site:tandtc.gov.vn", "site:bocongan.gov.vn", "site:moj.gov.vn" 
 ]
 
 RSS_SOURCES = [
-    "https://vnexpress.net/rss/tin-moi-nhat.rss",
-    "https://dantri.com.vn/rss/home.rss",
-    "https://vietnamnet.vn/rss/home.rss",
-    "https://tuoitre.vn/rss/tin-moi-nhat.rss",
-    "https://thanhnien.vn/rss/home.rss",
-    "https://laodong.vn/rss/home.rss",
-    "https://nld.com.vn/rss/home.rss",
-    "https://tienphong.vn/rss/home.rss",
-    "https://plo.vn/rss/home.rss",
-    "https://congly.vn/rss/home.rss",
-    "https://baophapluat.vn/rss/home.rss",
-    "https://baovephapluat.vn/rss/home.rss",
-    "https://cand.com.vn/rss/su-kien-binh-luan-chu-diem/",
-    "https://nhandan.vn/rss/phap-luat.rss",
-    "https://baochinhphu.vn/Rss/xa-hoi.rss",
-    "https://baotintuc.vn/phap-luat.rss",
-    "https://congthuong.vn/rss/phap-luat.rss",
-    "https://baoxaydung.com.vn/rss/home.rss",
-    "https://baogiaothong.vn/rss/home.rss",
-    "https://daidoanket.vn/rss/phap-luat.rss",
-    "https://vneconomy.vn/rss/home.rss",
-    "https://cafef.vn/trang-chu.rss",
-    "https://cafebiz.vn/trang-chu.rss",
-    "https://vietnamfinance.vn/rss/home.rss",
-    "https://baodautu.vn/rss/phap-luat.rss",
-    "https://diendandoanhnghiep.vn/rss/home.rss",
-    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
-    "https://nguoiquansat.vn/rss/home.rss",
-    "https://cafebiz.vn/rss.chn",
-    "https://vneconomy.vn/rss.html",
-    "https://vietnamfinance.vn/rss/home.rss",
-    "https://mekongasean.vn/rss",
-    "https://congthuong.vn/rss/home.rss",
-    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
-    "https://diendandoanhnghiep.vn/rss/home.rss",
-    "https://haiquanonline.com.vn/rss/home.rss",
-    "https://kinhtedothi.vn/rss/home.rss",
-    "https://doanhnghiepvn.vn/rss/home.rss",
-    "https://thuonghieucongluan.com.vn/rss/home.rss",
-    "https://vietq.vn/rss",
-    "https://tapchitaichinh.vn/rss",
-    "https://baotainguyenmoitruong.vn/rss/home.rss",
-    "https://moitruongvadothi.vn/rss/home.rss",
-    "https://nongnghiep.vn/rss/home.rss",
-    "https://khoahocdoisong.vn/rss/home.rss",
-    "https://vietq.vn/rss/home.rss",
-    "https://suckhoedoisong.vn/rss/home.rss",
-    "https://moitruong.net.vn/rss",
-    "https://tainguyenvamoitruong.vn/rss/home.rss",
-    "
+    "https://vnexpress.net/rss/tin-moi-nhat.rss", "https://dantri.com.vn/rss/home.rss", "https://vietnamnet.vn/rss/home.rss",
+    "https://tuoitre.vn/rss/tin-moi-nhat.rss", "https://thanhnien.vn/rss/home.rss", "https://laodong.vn/rss/home.rss",
+    "https://nld.com.vn/rss/home.rss", "https://tienphong.vn/rss/home.rss", "https://plo.vn/rss/home.rss",
+    "https://congly.vn/rss/home.rss", "https://baophapluat.vn/rss/home.rss", "https://baovephapluat.vn/rss/home.rss",
+    "https://cand.com.vn/rss/su-kien-binh-luan-chu-diem/", "https://nhandan.vn/rss/phap-luat.rss",
+    "https://baochinhphu.vn/Rss/xa-hoi.rss", "https://baotintuc.vn/phap-luat.rss", "https://congthuong.vn/rss/phap-luat.rss",
+    "https://baoxaydung.com.vn/rss/home.rss", "https://baogiaothong.vn/rss/home.rss", "
