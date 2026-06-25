@@ -22,48 +22,48 @@ UPDATES_FILE = "telegram_updates.json"
 # ĐIỀU KIỆN LỌC CỨNG (HARD FILTER) - Chỉ quét chính xác trong các khu vực này
 EXACT_LOCATIONS = [
     "Lào Cai", 
-    "Lâm Thượng", "Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
+    "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
     "Mường Lai", "xã Yên Bình", "Thác Bà", "hồ Thác Bà", 
     "Cảm Nhân", "Lục Yên", "xã Yên Thành", "Tân Lĩnh", "huyện Yên Bình", "Yên Bái",
 ]
 
-# KIẾN TRÚC TRUNG TÂM: RULE_ENGINE (Tích hợp Điểm số, Từ khóa và Phân tích AI)
+# TẬP TRUNG TỐI ĐA VÀO NGHỊ QUYẾT 205 - LOẠI BỎ HÌNH SỰ THUẦN TÚY
 RULE_ENGINE = {
     "Môi trường & Sinh thái": {
-        "score": 20,
+        "score": 25,
         "is_nq205": True,
-        "keywords": ["ô nhiễm", "xả thải", "nước thải", "bụi mù mịt", "khói bụi", "rác thải", "mùi hôi", "bụi trắng", "môi trường"],
-        "hint": "Cần xác minh mức độ ảnh hưởng đến cộng đồng dân cư xung quanh."
+        "keywords": ["ô nhiễm", "đổ rác bừa bãi", "hôi", "bột đá", "xả thải", "bụi bặm", "khói", "đá văng", "nước thải", "bụi mù mịt", "khói bụi", "rác thải", "mùi hôi", "bụi trắng", "môi trường"],
+        "hint": "Cần xác minh mức độ ảnh hưởng đến cộng đồng dân cư xung quanh (NQ205)."
     },
     "Quản lý Đất đai & Tài nguyên": {
         "score": 25,
         "is_nq205": True,
         "keywords": ["lấn chiếm đất", "đất công", "khai thác khoáng sản", "mỏ đá", "khai thác cát", "san gạt", "đất rừng", "sạt lở", "tài sản công", "phá rừng", "đất đai"],
-        "hint": "Kiểm tra tính pháp lý của dự án, hoạt động khai thác và ranh giới cấp phép."
+        "hint": "Kiểm tra tính pháp lý của dự án, ranh giới cấp phép và thiệt hại tài nguyên (NQ205)."
     },
     "Bảo vệ Nhóm yếu thế": {
         "score": 30,
         "is_nq205": True,
-        "keywords": ["bạo hành trẻ em", "xâm hại trẻ em", "người dân tộc thiểu số", "người già neo đơn", "bóc lột lao động", "hiếp dâm"],
-        "hint": "Vi phạm nghiêm trọng liên quan đến nhóm yếu thế, ưu tiên xác minh khẩn cấp để có biện pháp bảo vệ."
+        "keywords": ["bạo hành trẻ em", "xâm hại trẻ em", "người dân tộc thiểu số", "người già neo đơn", "bóc lột lao động", "căn cước", "giấy khai sinh", "người khuyết tật", "trợ cấp", "bạo lực gia đình"],
+        "hint": "Cần có biện pháp bảo vệ khẩn cấp quyền và lợi ích hợp pháp của nhóm yếu thế (NQ205)."
     },
-    "Tội phạm Hình sự & Tham nhũng": {
-        "score": 30,
-        "is_nq205": False,
-        "keywords": ["giết người", "tham nhũng", "nhận hối lộ", "đưa hối lộ", "tham ô", "ma túy", "lừa đảo", "chiếm đoạt tài sản", "án oan", "cướp", "cán bộ vòi tiền"],
-        "hint": "Dấu hiệu án hình sự, cần phối hợp kiểm tra để chuyển thông tin cho bộ phận kiểm sát điều tra."
+    "Tham nhũng & Lợi ích công": {
+        "score": 15,
+        "is_nq205": True, # Xét dưới góc độ thất thoát tài sản nhà nước/lợi ích công cộng
+        "keywords": ["tham nhũng", "nhận hối lộ", "tham ô", "lừa đảo", "chiếm đoạt tài sản", "cán bộ vòi tiền"],
+        "hint": "Nghiên cứu hồ sơ xem có yếu tố khởi kiện dân sự đòi bồi thường thiệt hại cho Nhà nước không (NQ205)."
     },
     "An toàn & Tiêu dùng Dân sinh": {
         "score": 15,
         "is_nq205": True,
-        "keywords": ["hàng giả", "thực phẩm bẩn", "ngộ độc", "tai nạn", "thuốc giả", "bất an", "bạo lực gia đình", "cháy rừng", "vi phạm"],
-        "hint": "Theo dõi số lượng cá nhân bị ảnh hưởng để đánh giá mức độ vi phạm lợi ích công cộng."
+        "keywords": ["hàng giả", "thực phẩm bẩn", "ngộ độc", "tai nạn", "thuốc giả", "bất an"],
+        "hint": "Đánh giá số lượng người bị ảnh hưởng để xác định vi phạm lợi ích công cộng (NQ205)."
     },
     "Báo chí phản ánh": {
         "score": 5,
         "is_nq205": True,
         "keywords": ["kêu cứu", "bức xúc", "phản ánh", "kiến nghị", "dân khổ", "đe dọa an toàn"],
-        "hint": "Cần đối chiếu với các nguồn tin khác hoặc chính quyền cơ sở để xác minh tính khách quan."
+        "hint": "Đối chiếu nguồn tin với chính quyền cơ sở để xác minh tính khách quan."
     }
 }
 
