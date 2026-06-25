@@ -242,5 +242,135 @@ def process_article(title, content, link, source):
     else:
         level = "🟢 THẤP"
 
-    alert = f"""
-🚨 CẢNH BÁO NGUỒN TIN CÓ
+    # Định dạng an toàn cho GitHub Actions (Không dùng triple-quote)
+    time_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    loc_str = ", ".join(matched_locations) if matched_locations else "Không xác định"
+    kw_str = ", ".join(matched_keywords)
+
+    alert = (
+        f"🚨 CẢNH BÁO NGUỒN TIN CÓ DẤU HIỆU VI PHẠM\n\n"
+        f"📊 MỨC ĐỘ: {level} (Điểm AI: {score})\n\n"
+        f"📡 Nguồn: {source}\n"
+        f"⏰ Thời gian: {time_str}\n"
+        f"📍 Địa bàn: {loc_str}\n"
+        f"🔍 Dấu hiệu: {kw_str}\n\n"
+        f"📰 Tiêu đề: {title}\n"
+        f"🔗 Link: {link}"
+    )
+
+    broadcast(alert)
+
+# ===============================
+# SCANNERS
+# ===============================
+
+def scan_google_news():
+    queries = []
+    for loc in BASE_LOCATIONS:
+        for kw in GOOGLE_KEYWORDS:
+            queries.append(f"{loc} {kw}")
+
+    for query in queries:
+        try:
+            rss_url = (
+                f"https://news.google.com/rss/search?"
+                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+            )
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:25]:
+                # Tối ưu hóa: Không tải toàn bộ bài báo nếu không cần thiết
+                content = ""
+                if hasattr(entry, "summary"):
+                    content += entry.summary
+                if hasattr(entry, "description"):
+                    content += entry.description
+                if len(content) < 100:
+                    content = get_article_content(entry.link)
+
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    "Google News"
+                )
+        except Exception as e:
+            print("Google News error:", e)
+
+def scan_google_news_all():
+    queries = [
+        "ô nhiễm", "khai thác khoáng sản", "đất đai", "hàng giả",
+        "xả thải", "phá rừng", "tham nhũng", "vi phạm"
+    ]
+
+    for query in queries:
+        try:
+            rss_url = (
+                f"https://news.google.com/rss/search?"
+                f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
+            )
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:25]:
+                content = entry.summary if hasattr(entry, "summary") else ""
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    "Google RSS"
+                )
+        except Exception as e:
+            print("Google News All error:", e)
+
+def scan_rss():
+    for rss_url in RSS_SOURCES:
+        try:
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:25]:
+                content = ""
+                if hasattr(entry, "summary"):
+                    content += entry.summary
+                if hasattr(entry, "description"):
+                    content += entry.description
+                if len(content) < 100:
+                    content = get_article_content(entry.link)
+
+                process_article(
+                    entry.title,
+                    content,
+                    entry.link,
+                    rss_url
+                )
+        except Exception as e:
+            print("RSS error:", e)
+
+# ===============================
+# MAIN
+# ===============================
+
+def run():
+    global new_articles_found
+
+    get_updates()
+
+    if not subscribers:
+        print("No subscribers.")
+        return
+
+    broadcast("🔎 RADAR205 bắt đầu rà soát thông tin hôm nay...")
+
+    scan_google_news()
+    scan_google_news_all()
+    scan_rss()
+
+    if new_articles_found == 0:
+        broadcast(
+            "📭 Hôm nay không phát hiện thông tin mới thuộc phạm vi rà soát Nghị quyết 205.\n\n"
+            "Hệ thống sẽ tiếp tục rà soát vào ngày mai."
+        )
+    else:
+        broadcast(f"✅ Hoàn thành rà soát. Phát hiện {new_articles_found} thông tin mới.")
+
+if __name__ == "__main__":
+    run()
