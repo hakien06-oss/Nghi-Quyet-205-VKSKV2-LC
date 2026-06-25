@@ -19,354 +19,63 @@ CACHE_FILE = "radar205_cache.json"
 SUBSCRIBERS_FILE = "subscribers.json"
 UPDATES_FILE = "telegram_updates.json"
 
+# Đã làm sạch các đơn vị hành chính giải thể
 BASE_LOCATIONS = [
-    "Lâm Thượng",
-    "xã Khánh Hòa",
-    "xã Phúc Lợi",
-    "Bảo Ái",
-    "Mường Lai",
-    "Yên Bình",
-    "Thác Bà",
-    "Cảm Nhân",
-    "Lục Yên",
-    "xã Yên Thành",
-    "Tân Lĩnh",
-    "Lào Cai",
-    "huyện Lục Yên",
-    "hồ Thác Bà",
+    "Lâm Thượng", "xã Khánh Hòa", "xã Phúc Lợi", "Bảo Ái",
+    "Mường Lai", "Yên Bình", "Thác Bà", "Cảm Nhân", "Lục Yên",
+    "xã Yên Thành", "Tân Lĩnh", "Lào Cai", "hồ Thác Bà"
 ]
 
 LOCATIONS = BASE_LOCATIONS.copy()
 
-KEYWORDS = [
-    # môi trường
-    "ô nhiễm",
-    "ô nhiễm môi trường",
-    "ô nhiễm không khí",
-    "ô nhiễm nguồn nước",
-    "bụi",
-    "bụi trắng",
-    "bụi mù mịt",
-    "bụi bặm",
-    "khói",
-    "khói bụi",
-    "mùi hôi",
-    "xả thải",
-    "xả nước thải",
-    "nước thải",
-    "rác",
-    "rác thải",
-    "đổ rác",
-    "đốt rác",
-    "ô nhiễm tiếng ồn",
-    "ảnh hưởng sức khỏe",
-    "gây ô nhiễm",
-    "mỏ đá",
-    "gây phiền",
-    "bãi thải",
-    "mỏ đá nằm sát khu dân cư",
-    "mỏ đá đập đục",
-    "mỏ đá trắng ở",
-    "nổ mìn",
-    "rung chấn",
-    "đá văng",
-    "đe dọa an toàn",
-    "bất an",
-    "lo lắng",
-    "nguy hiểm",
-    "xe quá tải",
-    "xe chở vật liệu",
-    "bụi phủ",
-
-    # đất đai
-    "lấn chiếm đất",
-    "đất công",
-    "hành lang giao thông",
-    "hành lang suối",
-    "san gạt",
-    "đất rừng",
-    "tài sản công",
-    "khai thác khoáng sản",
-    "khai thác cát",
-    "khai thác sỏi",
-    "sạt lở",
-    "mỏ đá",
+# Từ điển trọng số AI (Nâng cấp cốt lõi)
+WEIGHTED_KEYWORDS = {
+    # Dấu hiệu Tội phạm hình sự đặc biệt nghiêm trọng / Tham nhũng
+    "giết người": 30, "cướp": 30, "ma túy": 30, "tham nhũng": 30,
+    "nhận hối lộ": 30, "đưa hối lộ": 30, "tham ô": 30, "án oan": 30,
+    "mua bán người": 30, "hiếp dâm": 30, "xâm hại trẻ em": 30, "bạo hành trẻ em": 30,
     
-    # an toàn thực phẩm
-    "thực phẩm bẩn",
-    "ngộ độc",
-    "thuốc giả",
-    "thuốc hết hạn",
-
-    # tiêu dùng
-    "hàng giả",
-    "hàng kém chất lượng",
-    "quảng cáo sai sự thật",
+    # Kinh tế, Đất đai & Môi trường (Trọng tâm NQ 205)
+    "khai thác khoáng sản": 25, "mỏ đá": 25, "nổ mìn": 25, "sạt lở": 25,
+    "lấn chiếm đất": 25, "đất công": 25, "tài sản công": 25, "phá rừng": 25,
+    "cán bộ vòi tiền": 25, "lừa đảo": 25, "chiếm đoạt tài sản": 25,
     
-     # DẤU HIỆU TỘI PHẠM HÌNH SỰ
-    "giết người",
-    "cố ý gây thương tích",
-    "kêu oan",
-    "án oan",
-    "cán bộ vòi tiền",
-    "đánh người",
-    "hành hung",
-    "chém người",
-    "đâm người",
-    "gây rối trật tự công cộng",
-    "cướp",
-    "cướp giật",
-    "trộm cắp",
-    "trộm",
-    "lừa đảo",
-    "chiếm đoạt tài sản",
-    "tham ô",
-    "nhận hối lộ",
-    "đưa hối lộ",
-    "môi giới hối lộ",
-    "tham nhũng",
-    "giả mạo giấy tờ",
-    "làm giả",
-    "giấy tờ giả",
-    "ma túy",
-    "tàng trữ ma túy",
-    "mua bán ma túy",
-    "tổ chức sử dụng ma túy",
-    "đánh bạc",
-    "tổ chức đánh bạc",
-    "buôn lậu",
-    "hàng cấm",
-    "vận chuyển hàng cấm",
-    "hủy hoại tài sản",
-    "đe dọa giết người",
-    "chống người thi hành công vụ",
+    # Dân sinh & Tiêu dùng
+    "xả thải": 20, "hàng giả": 20, "thực phẩm bẩn": 20, "thuốc giả": 20,
+    "nước thải": 20, "khai thác cát": 20, "tai nạn": 20, "cháy rừng": 20,
+    "vi phạm": 20, "ngộ độc": 20, "bạo lực gia đình": 20,
 
-    # nhóm yếu thế
-    "bạo hành trẻ em",
-    "xâm hại trẻ em",
-    "xâm hại tình dục",
-    "hiếp dâm",
-    "dâm ô",
-    "bỏ mặc trẻ em",
-    "mua bán người",
-    "bóc lột lao động",
-    "bạo lực gia đình",
-    "người già neo đơn",
-    "người dân tộc thiểu số",
+    # Dấu hiệu cảnh báo mức độ 1
+    "ô nhiễm": 15, "rác thải": 15, "bụi trắng": 15, "khói bụi": 15, 
+    "xe quá tải": 15, "san gạt": 15, "đất đai": 15,
 
-    # ngôn ngữ báo chí mềm
-    "phản ánh",
-    "bức xúc",
-    "kêu cứu",
-    "kiến nghị",
-    "người dân phản ánh",
-    "dân khổ"
+    # Ngôn ngữ báo chí mềm
+    "kêu cứu": 10, "bức xúc": 5, "phản ánh": 5, "kiến nghị": 5, 
+    "dân khổ": 5, "bất an": 5, "đe dọa an toàn": 5
+}
+
+GOOGLE_KEYWORDS = [
+    "ô nhiễm", "xả thải", "nước thải", "khai thác khoáng sản",
+    "mỏ đá", "mỏ cát", "khai thác cát", "đất đai", "lấn chiếm đất",
+    "đất công", "tham nhũng", "hàng giả", "thực phẩm bẩn", "tai nạn",
+    "sạt lở", "phá rừng", "rác thải", "cháy rừng", "vi phạm", "bức xúc"
 ]
 
 RSS_SOURCES = [
-   # ===== Báo điện tử tổng hợp =====
-    "https://vnexpress.net/rss",
+    "https://vnexpress.net/rss/tin-moi-nhat.rss",
     "https://dantri.com.vn/rss/home.rss",
     "https://vietnamnet.vn/rss/home.rss",
+    "https://laodong.vn/rss/home.rss",
     "https://thanhnien.vn/rss/home.rss",
     "https://tuoitre.vn/rss/tin-moi-nhat.rss",
-    "https://laodong.vn/rss/home.rss",
-    "https://tienphong.vn/rss/home.rss",
     "https://nld.com.vn/rss/home.rss",
-    "https://danviet.vn/rss/home.rss",
-
-    # ===== Cơ quan báo chí Trung ương =====
-    "https://nhandan.vn/rss/home.rss",
-    "https://www.vietnamplus.vn/rss/home.rss",
-    "https://baotintuc.vn/tin-moi-nhat.rss",
-    "https://baochinhphu.vn/rss/home.rss",
-    "https://vov.vn/rss/home.rss",
-    "https://vtv.vn/rss/home.rss",
-
-    # ===== Đối ngoại =====
-    "https://baoquocte.vn/rss/home.rss",
-    "https://daidoanket.vn/rss/home.rss",
-
-    # ===== Pháp luật =====
-    "https://cand.com.vn/rss/home.rss",
-    "https://baovephapluat.vn/rss/home.rss",
-    "https://congly.vn/rss/home.rss",
-    "https://baophapluat.vn/rss/home.rss",
+    "https://tienphong.vn/rss/home.rss",
     "https://plo.vn/rss/home.rss",
-
-    # ===== Chính trị - Đảng =====
-    "https://xaydungdang.org.vn/rss",
-    "https://tapchicongsan.org.vn/rss",
-
-    # ===== Quân đội =====
-    "https://qdnd.vn/rss",
- # ===== Môi trường =====
-    "https://moitruong.net.vn/rss",
-    "https://tainguyenvamoitruong.vn/rss/home.rss",
-
-    # ===== Nông nghiệp - Môi trường =====
-    "https://nongnghiepmoitruong.vn/rss/home.rss",
-
-    # ===== Tài nguyên nước - Khoáng sản =====
-    "https://tapchimoitruong.vn/rss",
-    "https://moitruongvadothi.vn/rss",
-
-    # ===== Biến đổi khí hậu =====
-    "https://vacne.org.vn/rss",
-
-    # ===== Khoa học môi trường =====
-    "https://khoahocdoisong.vn/rss/home.rss",
-
-    # ===== Chất lượng - Tiêu chuẩn =====
-    "https://vietq.vn/rss",
-
-    # ===== Năng lượng =====
-    "https://nangluongsachvietnam.vn/rss",
-
-    # ===== Đô thị =====
-    "https://kinhtedothi.vn/rss/home.rss",
-
-    # ===== Xây dựng =====
-    "https://baoxaydung.com.vn/rss/home.rss",
-
-    # ===== Giao thông =====
-    "https://baogiaothong.vn/rss/home.rss",
-
-    # ===== Hải quan =====
-    "https://haiquanonline.com.vn/rss/home.rss",
-
-    # ===== Công Thương =====
-    "https://congthuong.vn/rss/home.rss",
-
-    # ===== Doanh nghiệp =====
-    "https://diendandoanhnghiep.vn/rss/home.rss",
-
-    # ===== Tài chính =====
-    "https://tapchitaichinh.vn/rss",
-
-    # ===== Kinh tế xanh =====
-    "https://vneconomy.vn/rss.html",
-
-    # ===== Sức khỏe =====
-    "https://suckhoedoisong.vn/rss/home.rss",
-
-    # ===== Pháp luật =====
-    "https://baophapluat.vn/rss/home.rss",
-    "https://cand.com.vn/rss/home.rss",
-    "https://baovephapluat.vn/rss/home.rss",
-     # ===== Kinh tế - Tài chính =====
-    "https://baodautu.vn/rss/home.rss",
-    "https://cafef.vn/rss.chn",
-    "https://cafebiz.vn/rss.chn",
-    "https://vneconomy.vn/rss.html",
-    "https://vietnamfinance.vn/rss/home.rss",
-    "https://mekongasean.vn/rss",
-    "https://congthuong.vn/rss/home.rss",
-    "https://thoibaotaichinhvietnam.vn/rss/home.rss",
-    "https://diendandoanhnghiep.vn/rss/home.rss",
-    "https://haiquanonline.com.vn/rss/home.rss",
-    "https://kinhtedothi.vn/rss/home.rss",
-    "https://doanhnghiepvn.vn/rss/home.rss",
-    "https://thuonghieucongluan.com.vn/rss/home.rss",
-    "https://vietq.vn/rss",
-    "https://tapchitaichinh.vn/rss",
-
-    # ===== Công nghệ =====
-    "https://genk.vn/rss.chn",
-
-    # ===== Khoa học - Giáo dục =====
-    "https://khoahocdoisong.vn/rss/home.rss",
-    "https://giaoducthoidai.vn/rss/home.rss",
-
-    # ===== Y tế - Môi trường =====
-    "https://suckhoedoisong.vn/rss/home.rss",
-    "https://moitruong.net.vn/rss",
-    "https://tainguyenvamoitruong.vn/rss/home.rss",
-
-    # ===== Xã hội =====
-    "https://doisongphapluat.com/rss/home.rss",
-    "https://giadinh.suckhoedoisong.vn/rss/home.rss",
-
-    # ===== Tin nhanh - Tổng hợp =====
-    "https://soha.vn/rss/home.rss",
-    "https://kenh14.vn/rss.chn",
-    "https://1thegioi.vn/rss",
-    "https://kienthuc.net.vn/rss/home.rss",
-    "https://nguoiduatin.vn/rss/home.rss",
-    "https://www.24h.com.vn/upload/rss/trangchu24h.rss",
-     "https://congbao.chinhphu.vn/cac-van-ban-moi-ban-hanh.rss",
-    "https://congbao.chinhphu.vn/cac-so-cong-bao-moi-dang.rss",
-
-    # ==========================================
-    # BỘ CÔNG AN
-    # ==========================================
-
-    "https://www.mps.gov.vn/rss",
-
-    # ==========================================
-    # KIỂM SÁT - TÒA ÁN
-    # ==========================================
-
-    "https://baovephapluat.vn/rss/home.rss",
-
-    # ==========================================
-    # MÔI TRƯỜNG - TÀI NGUYÊN
-    # ==========================================
-
-    "https://moitruong.net.vn/rss",
-    "https://tainguyenvamoitruong.vn/rss/home.rss",
-    "https://nongnghiepmoitruong.vn/rss/home.rss",
-    "https://tapchimoitruong.vn/rss",
-    "https://moitruongvadothi.vn/rss",
-
-    # ==========================================
-    # NÔNG NGHIỆP - LÂM NGHIỆP
-    # ==========================================
-
-    "https://nongnghiep.vn/rss/home.rss",
-    "https://vacne.org.vn/rss",
-
-    # ==========================================
-    # XÂY DỰNG - QUY HOẠCH
-    # ==========================================
-
-    "https://baoxaydung.com.vn/rss/home.rss",
-    "https://xaydungchinhsach.chinhphu.vn/rss",
-    "https://kinhtedothi.vn/rss/home.rss",
-
-    # ==========================================
-    # GIAO THÔNG
-    # ==========================================
-
-    "https://baogiaothong.vn/rss/home.rss",
-
-    # ==========================================
-    # CÔNG THƯƠNG
-    # ==========================================
-
-    "https://congthuong.vn/rss/home.rss",
-
-    # ==========================================
-    # HẢI QUAN - THUẾ
-    # ==========================================
-
-    "https://haiquanonline.com.vn/rss/home.rss",
-    "https://tapchitaichinh.vn/rss",
-
-    # ==========================================
-    # KHOA HỌC
-    # ==========================================
-
-    "https://khoahocdoisong.vn/rss/home.rss",
-    "https://vietq.vn/rss",
-
-    # ==========================================
-    # Y TẾ
-    # ==========================================
-
-    "https://suckhoedoisong.vn/rss/home.rss",
+    "https://vov.vn/rss/vov.rss",
+    "https://baotainguyenmoitruong.vn/rss/home.rss",
+    "https://congly.vn/rss/home.rss",
+    "https://phapluatxahoi.kinhtedothi.vn/rss/home.rss",
     "https://baolaocai.vn/rss/home.rss",
-
 ]
 
 # ===============================
@@ -427,7 +136,6 @@ def get_updates():
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={offset}",
             timeout=20
         )
-
         data = r.json()
 
         if not data.get("ok"):
@@ -438,8 +146,7 @@ def get_updates():
 
             msg = item.get("message", {})
             text = msg.get("text", "")
-            chat = msg.get("chat", {})
-            chat_id = chat.get("id")
+            chat_id = msg.get("chat", {}).get("id")
 
             if not chat_id:
                 continue
@@ -448,50 +155,26 @@ def get_updates():
                 if chat_id not in subscribers:
                     subscribers.append(chat_id)
                     save_json(SUBSCRIBERS_FILE, subscribers)
-
                 send_message(
                     chat_id,
-                    "✅ Chào mừng bạn đã đã đăng ký nhận thông tin cảnh báo các vụ việc, nguồn tin về Nghị quyết 205 và các vụ việc có dấu hiệu vi phạm pháp luật trên địa bàn quản lý của VKSND khu vực 2, tỉnh Lào Cai."
+                    "✅ Chào mừng bạn đã đăng ký nhận thông tin cảnh báo các vụ việc, nguồn tin về Nghị quyết 205."
                 )
-
             elif text == "/stop":
                 if chat_id in subscribers and chat_id != ADMIN_CHAT_ID:
                     subscribers.remove(chat_id)
                     save_json(SUBSCRIBERS_FILE, subscribers)
-
-                send_message(
-                    chat_id,
-                    "⛔ Bạn đã hủy đăng ký nhận cảnh báo."
-                )
+                send_message(chat_id, "⛔ Bạn đã hủy đăng ký nhận cảnh báo.")
     except Exception as e:
         print("Update error:", e)
 
-    save_json(UPDATES_FILE, telegram_updates) 
+    save_json(UPDATES_FILE, telegram_updates)
+
 # ===============================
 # HELPERS
 # ===============================
 
 def make_hash(text):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
-
-
-def detect_locations(text):
-    t = text.lower()
-    found = []
-    for x in LOCATIONS:
-        if x.lower() in t:
-            found.append(x)
-    return list(set(found))
-
-
-def detect_keywords(text):
-    t = text.lower()
-    found = []
-    for x in KEYWORDS:
-        if x.lower() in t:
-            found.append(x)
-    return list(set(found))
-
 
 def get_article_content(url):
     try:
@@ -505,23 +188,12 @@ def get_article_content(url):
         pass
 
     try:
-        r = requests.get(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0"
-            },
-            timeout=20
-        )
-
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
         html = r.text
-
-        # fallback thô nhưng hữu ích hơn
         cleaned = html.replace("<", " ").replace(">", " ")
-
         return cleaned
     except:
         return ""
-
 
 # ===============================
 # PROCESS
@@ -529,55 +201,28 @@ def get_article_content(url):
 
 new_articles_found = 0
 
-
 def process_article(title, content, link, source):
     global new_articles_found
 
     full = f"{title} {content}".lower()
 
-    matched_locations = detect_locations(full)
-    matched_keywords = detect_keywords(full)
+    matched_locations = [loc for loc in LOCATIONS if loc.lower() in full]
+    matched_keywords = []
+    
+    # Tính điểm AI theo trọng số
+    score = 0
+    score += len(matched_locations) * 15
 
-    soft_location_hits = [
-        "lâm thượng",
-        "xã khánh hòa",
-        "xã phúc lợi",
-        "bảo ái",
-        "mường lai",
-        "yên bình",
-        "thác bà",
-        "cảm nhân",
-        "lục yên",
-        "xã yên thành",
-        "tân lĩnh",
-        "lào cai",
-        "mỏ đá",
-    ]
+    for kw, weight in WEIGHTED_KEYWORDS.items():
+        if kw.lower() in full:
+            matched_keywords.append(kw)
+            score += weight
 
-    if not matched_locations:
-        if any(x in full for x in soft_location_hits):
-            matched_locations = ["Nhận diện mềm theo nội dung"]
-
-    soft_keywords = [
-        "bụi",
-        "khói",
-        "khói bụi",
-        "ô nhiễm",
-        "bức xúc",
-        "kêu cứu",
-        "kiến nghị",
-        "ảnh hưởng sức khỏe",
-        "người dân phản ánh"
-    ]
-
-    if not matched_keywords:
-        if any(x in full for x in soft_keywords):
-            matched_keywords = ["Dấu hiệu cảnh báo mềm"]
-
-    if not matched_locations or not matched_keywords:
+    if score < 35:
         return
 
-    key = make_hash(link)
+    # Chống báo trùng bằng 80 ký tự đầu của Tiêu đề
+    key = make_hash(title.lower()[:80])
 
     if key in sent_cache:
         return
@@ -587,126 +232,15 @@ def process_article(title, content, link, source):
 
     new_articles_found += 1
 
-    alert = f"""
-🚨 CẢNH BÁO NGUỒN TIN CÓ DẤU HIỆU VI PHẠM PHÁP LUẬT
-
-📡 Nguồn:
-{source}
-
-⏰ Thời gian:
-{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
-
-📍 Địa bàn:
-{", ".join(matched_locations)}
-
-🔍 Dấu hiệu:
-{", ".join(matched_keywords)}
-
-📰 Tiêu đề:
-{title}
-
-🔗 Link:
-{link}
-"""
-
-    broadcast(alert)
-
-
-# ===============================
-# SCANNERS
-# ===============================
-
-def scan_google_news():
-    for loc in BASE_LOCATIONS:
-        queries = [
-            loc,
-            f"{loc} phản ánh",
-            f"{loc} môi trường",
-            f"{loc} ô nhiễm",
-            f"{loc} bụi",
-            f"{loc} khói bụi",
-            f"{loc} dân bức xúc",
-            f"{loc} kêu cứu",
-            f"{loc} đất đai",
-            f"{loc} trẻ em",
-            f"{loc} hộ tịch",
-            f"{loc} thực phẩm",
-            f"{loc} hàng giả",
-            f'site:baolaocai.vn "{loc}"',
-            f'site:laocai.gov.vn "{loc}"',
-        ]
-
-        for query in queries:
-            try:
-                rss_url = (
-                    f"https://news.google.com/rss/search?"
-                    f"q={quote(query)}&hl=vi&gl=VN&ceid=VN:vi"
-                )
-
-                feed = feedparser.parse(rss_url)
-
-                for entry in feed.entries[:25]:
-                    content = get_article_content(entry.link)
-
-                    process_article(
-                        entry.title,
-                        content,
-                        entry.link,
-                        "Google News"
-                    )
-
-            except Exception as e:
-                print("Google News error:", e)
-
-
-def scan_rss():
-    for rss_url in RSS_SOURCES:
-        try:
-            feed = feedparser.parse(rss_url)
-
-            for entry in feed.entries[:25]:
-                content = get_article_content(entry.link)
-
-                process_article(
-                    entry.title,
-                    content,
-                    entry.link,
-                    rss_url
-                )
-
-        except Exception as e:
-            print("RSS error:", e)
-
-
-# ===============================
-# MAIN
-# ===============================
-
-def run():
-    global new_articles_found
-
-    get_updates()
-
-    if not subscribers:
-        print("No subscribers.")
-        return
-
-    broadcast("🔎 RADAR205 bắt đầu rà soát thông tin hôm nay...")
-
-    scan_google_news()
-    scan_rss()
-
-    if new_articles_found == 0:
-        broadcast(
-            """📭 Hôm nay không phát hiện thông tin mới thuộc phạm vi rà soát Nghị quyết 205.
-
-Hệ thống sẽ tiếp tục rà soát vào ngày mai."""
-        )
+    # Phân loại mức độ nghiêm trọng
+    if score >= 80:
+        level = "🔴 RẤT CAO"
+    elif score >= 60:
+        level = "🟠 CAO"
+    elif score >= 40:
+        level = "🟡 TRUNG BÌNH"
     else:
-        broadcast(
-            f"✅ Hoàn thành rà soát. Phát hiện {new_articles_found} thông tin mới."
-        )
+        level = "🟢 THẤP"
 
-
-if __name__ == "__main__":
-    run()
+    alert = f"""
+🚨 CẢNH BÁO NGUỒN TIN CÓ
