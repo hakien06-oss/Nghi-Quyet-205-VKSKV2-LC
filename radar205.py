@@ -102,6 +102,9 @@ new_articles_found = 0
 def load_json(f, d): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else d
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"))
 
+# Cache giờ là danh sách để bảo toàn thứ tự, giới hạn 2000 tin
+sent_cache = load_json(CACHE_FILE, [])
+
 def broadcast(m):
     for id in load_json(SUBSCRIBERS_FILE, []):
         try: requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": id, "text": m[:4000]})
@@ -126,11 +129,16 @@ def process_article(title, content, link, source):
             if r["is_nq205"]: nq205 = True
 
     if score < 45: return
+    
     key = hashlib.md5(title.lower()[:80].encode()).hexdigest()
+    
     with file_lock:
-        cache = set(load_json(CACHE_FILE, []))
-        if key in cache: return
-        cache.add(key); save_json(CACHE_FILE, list(cache))
+        if key in sent_cache: return
+        sent_cache.append(key)
+        # Giới hạn nhớ 2000 tin gần nhất để file không bị quá nặng
+        if len(sent_cache) > 2000:
+            sent_cache.pop(0) 
+        save_json(CACHE_FILE, sent_cache)
         new_articles_found += 1
 
     lvl = "🔴 RẤT CAO" if score >= 80 else "🟠 CAO" if score >= 60 else "🟡 TRUNG BÌNH"
@@ -150,7 +158,49 @@ def process_single_feed(feed_info):
             process_article(e.title, c, e.link, name)
     except: pass
 
+def get_updates():
+    telegram_updates = load_json(UPDATES_FILE, {"offset": 0})
+    offset = telegram_updates.get("offset", 0)
+    try:
+        r = requests.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={offset}", timeout=20)
+        data = r.json()
+        if not data.get("ok"): return
+        for item in data["result"]:
+            telegram_updates["offset"] = item["update_id"] + 1
+            msg = item.get("message", {})
+            text = msg.get("text", "")
+            chat_id = msg.get("chat", {}).get("id")
+            if not chat_id: continue
+            
+            subscribers = load_json(SUBSCRIBERS_FILE, [])
+            if text == "/start":
+                with file_lock:
+                    if chat_id not in subscribers:
+                        subscribers.append(chat_id)
+                        save_json(SUBSCRIBERS_FILE, subscribers)
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": chat_id, "text": "✅ Đã đăng ký."})
+            elif text == "/stop":
+                with file_lock:
+                    if chat_id in subscribers and chat_id != ADMIN_CHAT_ID:
+                        subscribers.remove(chat_id)
+                        save_json(SUBSCRIBERS_FILE, subscribers)
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": chat_id, "text": "⛔ Đã hủy."})
+    except: pass
+    with file_lock:
+        save_json(UPDATES_FILE, telegram_updates)
+
 if __name__ == "__main__":
+    get_updates()
+    
+    # Bổ sung câu chào khi khởi động
+    time_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    greeting = (
+        f"🤖 [RADAR NQ205] Khởi động hệ thống rà soát tự động...\n"
+        f"⏰ Thời gian: {time_str}\n"
+        f"🔎 Đang tiến hành quét đa luồng trên 60+ nguồn tin báo chí và cổng thông tin..."
+    )
+    broadcast(greeting)
+
     tasks = [(u, "RSS") for u in RSS_SOURCES]
     for l in EXACT_LOCATIONS:
         for k in GOOGLE_QUERIES:
@@ -160,4 +210,7 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exec:
         exec.map(process_single_feed, list(set(tasks)))
     
-    broadcast(f"✅ Đã xử lý {new_articles_found} thông tin mới." if new_articles_found > 0 else "📭 Không có tin mới.")
+    if new_articles_found == 0:
+        broadcast("📭 Hôm nay không phát hiện nguồn tin mới thuộc phạm vi NQ 205.\n♻️ Hẹn gặp lại vào ngày mai.")
+    else:
+        broadcast(f"✅ Hoàn thành rà soát. Đã phát hiện và xử lý {new_articles_found} thông tin mới.")
