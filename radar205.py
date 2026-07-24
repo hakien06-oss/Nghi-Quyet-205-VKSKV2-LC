@@ -40,7 +40,7 @@ RULE_ENGINE = {
         "score": 25,
         "is_nq205": True,
         "keywords": ["lấn chiếm đất", "đất công", "khai thác khoáng sản", "mỏ đá", "khai thác cát", "san gạt", "vật liệu xây dựng", "đất hiếm", 
-            "đào đất", "đào núi", "nổ mìn", "đập đá", "máy nghiền", "đất rừng", "sạt lở", "tài sản công", "phá rừng", "đất đai"],
+            "đào đất", "đào núi", "nổ mìn", "đập đá", "máy nghiền", "đất rừng", "tài sản công", "phá rừng",],
         "hint": "Kiểm tra tính pháp lý của dự án, ranh giới cấp phép và thiệt hại tài nguyên (NQ205)."
     },
     "Bảo vệ Nhóm yếu thế": {
@@ -71,7 +71,7 @@ RULE_ENGINE = {
 
 GOOGLE_QUERIES = [
     "ô nhiễm", "khai thác khoáng sản", "mỏ đá", "đất đai", 
-    "lấn chiếm", "xả thải", "phá rừng", "vi phạm", "sạt lở", "bức xúc",
+    "lấn chiếm", "xả thải", "phá rừng", "vi phạm", "bức xúc",
     "site:thanhtra.gov.vn", "site:vksndtc.gov.vn", "site:tandtc.gov.vn", "site:bocongan.gov.vn", "site:moj.gov.vn" 
 ]
 
