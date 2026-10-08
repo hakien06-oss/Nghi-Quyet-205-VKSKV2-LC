@@ -49,8 +49,8 @@ MIN_SCORE = 50
 #                 hoặc bài có nhắc Lào Cai / Yên Bái / Lục Yên / Thác Bà / huyện Yên Bình
 COMMUNES = {
     "Lâm Thượng": {"aliases": ["Lâm Thượng"], "ambiguous": False},
-    "xã Khánh Hòa":  {"aliases": ["xã Khánh Hòa"], "ambiguous": True},
-    "xã Phúc Lợi":   {"aliases": ["xã Phúc Lợi"], "ambiguous": True},
+    "Khánh Hòa":  {"aliases": ["Khánh Hòa"], "ambiguous": True},
+    "Phúc Lợi":   {"aliases": ["Phúc Lợi"], "ambiguous": True},
     "Bảo Ái":     {"aliases": ["Bảo Ái"], "ambiguous": False},
     "Mường Lai":  {"aliases": ["Mường Lai"], "ambiguous": False},
     "Yên Bình":   {"aliases": ["Yên Bình"], "ambiguous": True},
@@ -611,6 +611,7 @@ if __name__ == "__main__":
                 seen_keys[k] = now
             seen_titles.append({"t": " ".join(sorted(c["tokens"])), "ts": now})
             seen_title_tokens.append((c["tokens"], now))
+            prune_and_save_cache(seen_keys, seen_titles)  # lưu ngay, phòng khi bị ngắt giữa chừng
         extra = len(candidates) - sent
         tail = f"\n(Còn {extra} tin sẽ được gửi ở lần rà soát sau.)" if extra > 0 else ""
         broadcast(f"✅ Đã gửi {sent} nguồn tin.{tail}\n\n{CLOSING}")
