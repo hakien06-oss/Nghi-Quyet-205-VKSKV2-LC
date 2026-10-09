@@ -49,8 +49,8 @@ MIN_SCORE = 50
 #                 hoặc bài có nhắc Lào Cai / Yên Bái / Lục Yên / Thác Bà / huyện Yên Bình
 COMMUNES = {
     "Lâm Thượng": {"aliases": ["Lâm Thượng"], "ambiguous": False},
-    "Khánh Hòa":  {"aliases": ["Khánh Hòa"], "ambiguous": True},
-    "Phúc Lợi":   {"aliases": ["Phúc Lợi"], "ambiguous": True},
+    "xã Khánh Hòa":  {"aliases": ["Khánh Hòa"], "ambiguous": True},
+    "xã Phúc Lợi":   {"aliases": ["Phúc Lợi"], "ambiguous": True},
     "Bảo Ái":     {"aliases": ["Bảo Ái"], "ambiguous": False},
     "Mường Lai":  {"aliases": ["Mường Lai"], "ambiguous": False},
     "Yên Bình":   {"aliases": ["Yên Bình"], "ambiguous": True},
@@ -136,13 +136,11 @@ GOOGLE_QUERIES = [
 
 # Lời chào / lời kết (sửa tại đây nếu muốn đổi nội dung)
 GREETING = (
-    "Xin chào quý vị! 👋\n"
-    "Radar NQ205 - Viện kiểm sát nhân dân khu vực 2, tỉnh Lào Cai xin gửi kết quả rà soát nguồn tin "
-    "thuộc phạm vi Nghị quyết 205/2025/QH15 trên địa bàn 11 xã."
+    "Xin chào !"
+    "Đây là công cụ tự động tìm kiếm nguồn thông tin liên quan đến Nghị quyết 205 của Viện kiểm sát nhân dân khu vực 2, tỉnh Lào Cai"
 )
 CLOSING = (
-    "Trên đây là kết quả rà soát. Đề nghị đơn vị nghiên cứu, xác minh và xử lý theo thẩm quyền. 🙏\n"
-    "Radar NQ205 xin trân trọng cảm ơn và sẽ tiếp tục cập nhật ở lần rà soát tới."
+    "Trên đây là kết quả rà soát, tìm kiếm nguôn thông tin liên quan NQ 205 của ngày hôm nay !"
 )
 
 # ---- LỚP 1: RSS trực tiếp (nhanh, lấy tin mới nhất của từng chuyên mục) ----
