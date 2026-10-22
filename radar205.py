@@ -7,12 +7,20 @@ import random
 import hashlib
 import threading
 import concurrent.futures
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import html as htmllib
 from calendar import timegm
 from urllib.parse import quote, urlsplit, urlunsplit
 
 import requests
 import feedparser
+
+# Giải mã link Google News (news.google.com/rss/articles/...) về địa chỉ bài gốc để đọc nội dung.
+# Cài bằng: pip install googlenewsdecoder  (đã thêm vào requirements.txt)
+try:
+    from googlenewsdecoder import gnewsdecoder
+except Exception:
+    gnewsdecoder = None
 
 # ===============================
 # CONFIG
@@ -72,8 +80,28 @@ NQ205_DIRECT = {
 # Chỉ áp dụng cho bài RSS trực tiếp (link Google News là link chuyển hướng, không đọc được),
 # và chỉ khi tiêu đề/tóm tắt đã có từ khóa mạnh nhưng chưa thấy địa bàn.
 DEEP_FETCH = os.getenv("DEEP_FETCH", "1") == "1"
-MAX_DEEP_FETCH = int(os.getenv("MAX_DEEP_FETCH", "40"))  # tối đa mỗi lần chạy
+MAX_DEEP_FETCH = int(os.getenv("MAX_DEEP_FETCH", "100"))  # tối đa bài đọc nội dung mỗi lần chạy
 DEEP_KEEP_DAYS = 7
+DEEP_WORKERS = int(os.getenv("DEEP_WORKERS", "4"))
+# Điểm nền khi địa bàn chỉ được suy ra từ truy vấn Google News (tiêu đề/tóm tắt không nêu xã)
+HINT_BASE_SCORE = 28
+# Số bài tối đa đọc mỗi nguồn RSS
+MAX_ENTRIES_PER_FEED = int(os.getenv("MAX_ENTRIES_PER_FEED", "100"))
+
+# Giờ Việt Nam (UTC+7, không có giờ mùa hè) - GitHub Actions chạy giờ UTC nên phải đổi
+VN_TZ = timezone(timedelta(hours=7))
+
+
+def now_vn():
+    return datetime.now(VN_TZ)
+
+
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/124.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.5",
+}
 
 # 11 xã thuộc địa bàn VKSND khu vực 2, tỉnh Lào Cai
 # ambiguous=True: tên trùng với nơi khác trong cả nước -> chỉ nhận khi viết "xã <tên>"
@@ -175,6 +203,12 @@ NQ205_QUERIES = [
     "viện kiểm sát khởi kiện bảo vệ lợi ích công",
 ]
 
+# Lời chào gửi NGAY KHI BẮT ĐẦU quét ({time} được thay bằng giờ Việt Nam)
+START_GREETING = (
+    "Xin chào! Công cụ tự động tìm kiếm thông tin về Nghị quyết 205 của Viện kiểm sát nhân dân "
+    "khu vực 2, tỉnh Lào Cai chuẩn bị rà soát thông tin lúc {time}. Vui lòng chờ trong giây lát..."
+)
+
 # Lời chào / lời kết (sửa tại đây nếu muốn đổi nội dung)
 GREETING = (
     "Xin chào !"
@@ -253,6 +287,11 @@ NEWS_DOMAINS = [
     "baodienbienphu.com.vn", "baosonla.org.vn", "baolaichau.vn", "baohoabinh.com.vn", "baoquangninh.vn",
     "baobacgiang.vn", "baobacninh.com.vn", "baovinhphuc.com.vn",
 ]
+NEWS_DOMAINS += [
+    "danviet.vn", "infonet.vietnamnet.vn", "vtcnews.vn", "nongthonngaynay.vn", "baodauthau.vn",
+    "thuonghieucongluan.com.vn", "doanhnghiephoinhap.vn", "nongnghiephuuco.vn", "mae.gov.vn",
+    "baotintuc.vn", "vietnamnet.vn", "tienphong.vn", "nhandan.vn",
+]
 NEWS_DOMAINS = list(dict.fromkeys(NEWS_DOMAINS))
 
 HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; Radar205Bot/2.0)"}
@@ -330,7 +369,7 @@ EXCLUDE_PATTERN = build_pattern(EXCLUDE_PHRASES)
 
 def strip_html(s):
     s = re.sub(r"<[^>]+>", " ", s or "")
-    s = s.replace("&nbsp;", " ").replace("&amp;", "&")
+    s = htmllib.unescape(s).replace("\xa0", " ")
     return re.sub(r"\s+", " ", s).strip()
 
 
@@ -410,16 +449,22 @@ def prune_and_save_cache(seen, titles):
     if len(seen) > MAX_SEEN:
         seen = dict(sorted(seen.items(), key=lambda x: x[1], reverse=True)[:MAX_SEEN])
     titles = [t for t in titles if now - t["ts"] < TITLES_KEEP_DAYS * 86400][-MAX_TITLES:]
-    deep = {k: ts for k, ts in deep_done.items() if now - ts < DEEP_KEEP_DAYS * 86400}
+    deep = {k: v for k, v in deep_done.items() if now - v["ts"] < DEEP_KEEP_DAYS * 86400}
     save_json(CACHE_FILE, {"seen": seen, "titles": titles, "feed_fail": feed_fail, "deep_done": deep})
 
 
 seen_keys, seen_titles = load_cache()
 _raw_cache = load_json(CACHE_FILE, {})
 feed_fail = dict(_raw_cache.get("feed_fail", {})) if isinstance(_raw_cache, dict) else {}
-deep_done = dict(_raw_cache.get("deep_done", {})) if isinstance(_raw_cache, dict) else {}
-deep_count = 0
-deep_lock = threading.Lock()
+_raw_deep = _raw_cache.get("deep_done", {}) if isinstance(_raw_cache, dict) else {}
+# deep_done[khóa] = {"ts": thời điểm, "n": số lần thử, "ok": đã đọc được nội dung}
+deep_done = {k: (v if isinstance(v, dict) else {"ts": v, "n": 1, "ok": True}) for k, v in _raw_deep.items()}
+stats_lock = threading.Lock()
+deep_queue = []          # bài chưa đạt nhưng cần đọc nội dung để chắc chắn
+deep_stats = {"queued": 0, "skipped_cap": 0, "read_ok": 0, "read_fail": 0, "resolved": 0, "resolve_fail": 0}
+scan_stats = {"entries": 0}
+near_miss = []           # tin bị loại nhưng nên kiểm tra tay (chỉ báo cho admin)
+processed_pairs = set()  # (tiêu đề, gợi ý địa bàn) đã xét trong lần chạy này
 feed_stats = {}  # url -> "ok" | "empty" | "fail" (chỉ trong lần chạy này)
 seen_title_tokens = [(frozenset(t["t"].split()), t["ts"]) for t in seen_titles]
 
@@ -495,7 +540,8 @@ def find_direct(text):
     return sorted({m.group(0).lower() for m in NQ205_PATTERN.finditer(text)})
 
 
-def analyze(title, content, body=""):
+def analyze(title, content, body="", hint_locs=()):
+    """hint_locs: xã suy ra từ truy vấn Google News (dùng khi tiêu đề/tóm tắt/nội dung không nêu tên xã)."""
     head = f"{title} {content}"
     if EXCLUDE_PATTERN.search(head):  # chỉ xét tiêu đề + tóm tắt, tránh nhiễu từ thân bài
         return None
@@ -504,80 +550,190 @@ def analyze(title, content, body=""):
     kws, doms, hints, strong, kscore = match_domains(text)
     locs = find_communes(text)
     direct = find_direct(text)
+    unverified = False
+    if not locs and hint_locs:
+        locs, unverified = list(hint_locs), True
 
-    # (1) Bài nói trực tiếp về NQ205: không cần tên xã
+    if locs and not unverified:
+        tier, base = "commune", 30
+    elif locs:
+        tier, base = "commune", HINT_BASE_SCORE
+    elif PROVINCE_PATTERN.search(text):
+        tier, base = "province", PROVINCE_BASE_SCORE
+    else:
+        tier, base = "none", NQ205_DIRECT_BASE_SCORE
+
+    # Bài nói trực tiếp về NQ205: không cần địa bàn
     if direct:
-        base = 30 if locs else NQ205_DIRECT_BASE_SCORE
         return {
-            "locs": locs, "tier": "commune" if locs else "nq205",
+            "locs": locs, "tier": "commune" if locs else "nq205", "unverified": unverified,
             "kws": direct + kws, "doms": [NQ205_DIRECT["name"]] + doms,
             "hints": [NQ205_DIRECT["hint"]] + hints,
             "score": base + NQ205_DIRECT["score"] + kscore,
         }
 
-    # (2) Có tên xã thuộc địa bàn -> điểm nền 30; (3) chỉ có Lào Cai/Yên Bái -> tin cấp tỉnh
-    if locs:
-        tier, base = "commune", 30
-    elif PROVINCE_PATTERN.search(text):
-        tier, base = "province", PROVINCE_BASE_SCORE
-    else:
+    if tier == "none":
         return None
-
     score = base + kscore
     # BẮT BUỘC thuộc ít nhất 1 đối tượng/lĩnh vực của NQ205 (không chỉ "phản ánh/bức xúc")
     if not strong or score < MIN_SCORE:
         return None
-    return {"locs": locs, "tier": tier, "kws": kws, "doms": doms, "hints": hints, "score": score}
+    return {"locs": locs, "tier": tier, "unverified": unverified,
+            "kws": kws, "doms": doms, "hints": hints, "score": score}
 
 
-def fetch_body(link):
-    """Lấy các đoạn <p> đầu của bài (giới hạn số lần mỗi lần chạy)."""
-    global deep_count
-    with deep_lock:
-        if deep_count >= MAX_DEEP_FETCH:
-            return ""
-        deep_count += 1
+def resolve_google_link(link):
+    """Link Google News -> địa chỉ bài gốc. Trả về chuỗi rỗng nếu không giải mã được."""
+    if gnewsdecoder is None:
+        return ""
     try:
-        r = requests.get(link, headers=HTTP_HEADERS, timeout=15)
-        if not r.ok:
+        try:
+            d = gnewsdecoder(link, timeout=10)
+        except TypeError:  # bản thư viện cũ không có tham số timeout
+            d = gnewsdecoder(link)
+        ok = d.get("success", d.get("status"))
+        url = (d.get("decoded_url") or "") if ok else ""
+    except Exception:
+        url = ""
+    with stats_lock:
+        deep_stats["resolved" if url else "resolve_fail"] += 1
+    return url
+
+
+def fetch_body(url):
+    """Đọc lướt nội dung bài: mô tả (meta) + các đoạn văn đầu. Trả về chuỗi rỗng nếu không đọc được."""
+    try:
+        r = requests.get(url, headers=BROWSER_HEADERS, timeout=15)
+        if r.status_code != 200:
             return ""
-        paras = re.findall(r"<p[^>]*>(.*?)</p>", r.text, flags=re.S | re.I)
-        return " ".join(strip_html(p) for p in paras[:15])[:6000]
+        page = re.sub(r"(?is)<(script|style|noscript|nav|footer|header|aside|form)[^>]*>.*?</\1>", " ", r.text)
+        metas = re.findall(r'(?is)<meta[^>]+(?:property|name)=["\'](?:og:description|description)["\'][^>]*?'
+                           r'content=["\']([^"\']+)', page)
+        paras = re.findall(r"(?is)<p[^>]*>(.*?)</p>", page)
+        txt = " ".join(metas[:1] + [strip_html(x) for x in paras[:30]]).strip()
+        if len(txt) < 300:  # trang không dùng thẻ <p>: lấy toàn bộ chữ
+            txt = strip_html(page)[:8000]
+        # Trang chặn bot / thông báo lỗi thường rất ngắn
+        if len(txt) < 200 or re.search(r"(?i)just a moment|access denied|attention required|captcha", txt[:400]):
+            return ""
+        return txt[:8000]
     except Exception:
         return ""
 
 
-def process_article(title, content, link):
-    title = strip_html(title)
-    content = strip_html(content)
-    res = analyze(title, content)
-
-    if not res and DEEP_FETCH and "news.google.com" not in link:
-        head = f"{title} {content}"
-        if not EXCLUDE_PATTERN.search(head):
-            _, _, _, strong, _ = match_domains(head)
-            if strong or find_direct(head):
-                dk = "D:" + md5(normalize_link(link))
-                if dk not in deep_done:
-                    keys0 = keys_for(title, link)
-                    with cand_lock:
-                        dup = is_duplicate(keys0, title_tokens(title))
-                    if not dup:
-                        deep_done[dk] = time.time()
-                        body = fetch_body(link)
-                        if body:
-                            res = analyze(title, content, body)
-
-    if not res:
-        return
-    keys = keys_for(title, link)
+def add_candidate(title, link, res, extra_keys=(), extra=None):
+    keys = keys_for(title, link) | set(extra_keys)
     tokens = title_tokens(title)
     with cand_lock:
         if is_duplicate(keys, tokens):
-            return
+            return False
         seen_in_run_keys.update(keys)
         candidates.append({"title": clean_title(title) or title, "link": link, "keys": keys,
-                           "tokens": tokens, **res})
+                           "tokens": tokens, **res, **(extra or {})})
+    return True
+
+
+def process_article(title, content, link, ctx=(2, ())):
+    prio, hint = ctx
+    title = strip_html(title)
+    content = strip_html(content)
+    pair = (title, hint)
+    if pair in processed_pairs:  # cùng một bài xuất hiện ở hàng chục truy vấn: chỉ xét một lần
+        return
+    processed_pairs.add(pair)
+
+    res = analyze(title, content, hint_locs=hint)
+    keep = {"title_raw": title, "content": content, "rawlink": link, "hint": hint}
+    if res:
+        add_candidate(title, link, res, extra=keep)
+        return
+    if not DEEP_FETCH:
+        return
+
+    # Chưa đủ căn cứ qua tiêu đề/tóm tắt -> xếp hàng để đọc nội dung bài
+    head = f"{title} {content}"
+    if EXCLUDE_PATTERN.search(head):
+        return
+    _, _, _, strong, _ = match_domains(head)
+    has_loc = bool(find_communes(head)) or bool(hint) or bool(PROVINCE_PATTERN.search(head))
+    if not (strong or has_loc or find_direct(head)):
+        return
+    qk = keys_for(title, link)
+    with cand_lock:
+        if is_duplicate(qk, title_tokens(title)):
+            return
+        if qk & {k for it in deep_queue for k in it["keys"]}:
+            return
+        deep_queue.append({"kind": "new", "title": title, "content": content, "link": link, "hint": hint,
+                           "keys": qk, "strong": strong, "order": (0 if strong else 1, prio)})
+
+
+def _deep_key(link):
+    return "D:" + md5(normalize_link(link))
+
+
+def deep_one(it):
+    title, content, link, hint = it["title"], it["content"], it["link"], it["hint"]
+    real = resolve_google_link(link) if "news.google.com" in link else link
+    body = fetch_body(real) if real else ""
+    with stats_lock:
+        deep_stats["read_ok" if body else "read_fail"] += 1
+        prev = deep_done.get(_deep_key(link), {"n": 0})
+        deep_done[_deep_key(link)] = {"ts": time.time(), "n": prev.get("n", 0) + 1, "ok": bool(body)}
+
+    res = analyze(title, content, body, hint_locs=hint)
+    if res and body:
+        res["body_checked"] = True
+    extra_keys = {"L:" + md5(normalize_link(real))} if real and real != link else set()
+
+    if it["kind"] == "verify":
+        c = it["cand"]
+        if res:
+            c.update({k: res[k] for k in res})
+        if real and real != link:
+            c["link"] = real
+            c["keys"] = set(c["keys"]) | extra_keys
+        return
+
+    if res:
+        add_candidate(title, link, res, extra_keys=extra_keys,
+                      extra={"title_raw": title, "content": content, "rawlink": link, "hint": hint,
+                             **({"link": real} if real else {})})
+        return
+    # Vẫn bị loại: ghi lại để admin kiểm tra tay nếu đáng ngờ
+    why = None
+    if not body:
+        why = "không đọc được nội dung (trang chặn/lỗi)"
+    elif it["strong"]:
+        why = "có từ khóa NQ205 nhưng nội dung không nêu địa bàn thuộc KV2"
+    if why:
+        with stats_lock:
+            if not any(similar(title_tokens(title), title_tokens(t)) for t, _, _ in near_miss):
+                near_miss.append((clean_title(title) or title, why, real or link))
+
+
+def run_deep_phase():
+    """Đọc nội dung: (1) bài mới chưa đủ căn cứ, (2) bài cấp tỉnh / chưa xác minh xã để đối chiếu lại."""
+    if not DEEP_FETCH:
+        return
+    items = list(deep_queue)
+    for c in candidates:
+        if c.get("tier") == "province" or c.get("unverified"):
+            items.append({"kind": "verify", "cand": c, "title": c["title_raw"], "content": c["content"],
+                          "link": c["rawlink"], "hint": c["hint"], "keys": c["keys"], "strong": True,
+                          "order": (2, 0)})
+    items.sort(key=lambda x: x["order"])
+    todo = []
+    for it in items:
+        d = deep_done.get(_deep_key(it["link"]))
+        if d and (d.get("ok") or d.get("n", 0) >= 2):  # đã đọc rồi, hoặc đã thử 2 lần mà trang chặn
+            continue
+        todo.append(it)
+    deep_stats["queued"] = len(todo)
+    todo, rest = todo[:MAX_DEEP_FETCH], todo[MAX_DEEP_FETCH:]
+    deep_stats["skipped_cap"] = len(rest)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=DEEP_WORKERS) as ex:
+        list(ex.map(deep_one, todo))
 
 
 def fetch_feed(url):
@@ -598,7 +754,7 @@ def fetch_feed(url):
 
 
 def process_single_feed(feed_info):
-    url, name = feed_info
+    url, name, ctx = feed_info
     time.sleep(random.uniform(0.5, 1.5))
     cutoff = datetime.utcnow() - timedelta(days=MAX_AGE_DAYS)
     is_google = "news.google.com" in url
@@ -607,7 +763,9 @@ def process_single_feed(feed_info):
         n = len(f.entries)
         # RSS trực tiếp mà không có bài nào => nghi hỏng/đổi đường dẫn. Google News rỗng là bình thường.
         feed_stats[url] = "empty" if (n == 0 and not is_google) else "ok"
-        for e in f.entries[:60]:
+        with stats_lock:
+            scan_stats["entries"] += min(n, MAX_ENTRIES_PER_FEED)
+        for e in f.entries[:MAX_ENTRIES_PER_FEED]:
             title = getattr(e, "title", "") or ""
             link = getattr(e, "link", "") or ""
             if not title or not link:
@@ -615,8 +773,10 @@ def process_single_feed(feed_info):
             dt = entry_time(e)
             if dt and dt < cutoff:
                 continue  # bài cũ
-            c = (getattr(e, "summary", "") or "") + " " + (getattr(e, "description", "") or "")
-            process_article(title, c, link)
+            parts = [getattr(e, "summary", "") or "", getattr(e, "description", "") or ""]
+            for x in (getattr(e, "content", None) or []):  # content:encoded của nhiều báo có toàn văn
+                parts.append(x.get("value", "") if hasattr(x, "get") else "")
+            process_article(title, " ".join(parts), link, ctx)
     except Exception as ex:
         feed_stats[url] = "fail"
         print(f"[WARN] Lỗi nguồn {name}: {url[:90]} -> {type(ex).__name__}")
@@ -627,7 +787,14 @@ def build_alert(c, idx=1, total=1):
     hints = list(dict.fromkeys(c["hints"]))
     tier = c.get("tier", "commune")
     if tier == "commune":
-        loc_line = f"📍 Địa bàn (xã): {', '.join(sorted(set(c['locs'])))}"
+        names = [x for x in c["locs"] if x != "*"]
+        if c.get("unverified"):
+            who = ", ".join(sorted(set(names))) if names else "một trong các xã thuộc địa bàn VKSND KV2"
+            loc_line = f"📍 Địa bàn (xã): {who} (suy ra từ kết quả tìm kiếm, chưa đọc được nội dung bài - cần xác minh)"
+        else:
+            loc_line = f"📍 Địa bàn (xã): {', '.join(sorted(set(names)))}"
+            if c.get("body_checked"):
+                loc_line += " ✔ đã đối chiếu nội dung bài"
     elif tier == "province":
         loc_line = "📍 Phạm vi: CẤP TỈNH (Lào Cai/Yên Bái), chưa nêu xã - cần xác minh địa bàn thuộc VKSND KV2"
     else:
@@ -706,48 +873,57 @@ if __name__ == "__main__":
     if not TELEGRAM_TOKEN:
         raise SystemExit("Thiếu TELEGRAM_TOKEN")
 
-    started = datetime.now()
+    started = now_vn()
+    t0 = time.time()
+    time_str = started.strftime("%H:%M ngày %d/%m/%Y")
     get_updates()
+    # Lời chào ngay khi bắt đầu quét (gửi sau get_updates để người mới đăng ký cũng nhận được)
+    broadcast(START_GREETING.format(time=time_str))
 
-    tasks = [(u, "RSS") for u in RSS_SOURCES]
+    def g_url(q):
+        return f"https://news.google.com/rss/search?q={quote(q)}&hl=vi&gl=VN&ceid=VN:vi"
+
+    # Mỗi nhiệm vụ: (url, tên, (độ ưu tiên, xã gợi ý)). Xã gợi ý = xã đã đưa vào truy vấn Google News:
+    # Google tìm theo TOÀN VĂN bài, nên bài trả về thường có nhắc xã đó dù tiêu đề không nêu.
+    tasks = [(u, "RSS", (2, ())) for u in RSS_SOURCES]
     # (a) Từng xã x từng chủ đề NQ205
     for l, info in COMMUNES.items():
         place = f"{l} Lào Cai" if info["ambiguous"] else l
         for k in GOOGLE_QUERIES:
-            q = f"{place} {k} when:{MAX_AGE_DAYS}d"
-            u = f"https://news.google.com/rss/search?q={quote(q)}&hl=vi&gl=VN&ceid=VN:vi"
-            tasks.append((u, "Google News"))
-    # (b) Từng đầu báo x tên 11 xã (bao phủ cả báo không có RSS)
-    all_names = [a for info in COMMUNES.values() for a in info["aliases"]]
-    names_q = " OR ".join(f'"{a}"' for a in all_names)
+            tasks.append((g_url(f"{place} {k} when:{MAX_AGE_DAYS}d"), "Google News", (0, (l,))))
+    # (b) Từng đầu báo x tên các xã (không trùng tên nơi khác) - bao phủ cả báo không có RSS
+    sure_names = [a for info in COMMUNES.values() if not info["ambiguous"] for a in info["aliases"]]
+    names_q = " OR ".join(f'"{a}"' for a in sure_names)
     for d in NEWS_DOMAINS:
-        q = f"site:{d} ({names_q}) when:{MAX_AGE_DAYS}d"
-        u = f"https://news.google.com/rss/search?q={quote(q)}&hl=vi&gl=VN&ceid=VN:vi"
-        tasks.append((u, f"site:{d}"))
+        tasks.append((g_url(f"site:{d} ({names_q}) when:{MAX_AGE_DAYS}d"), f"site:{d}", (0, ("*",))))
+    # (b2) Các xã dễ trùng tên: bắt buộc viết "xã <tên>" kèm Lào Cai/Yên Bái
+    for l, info in COMMUNES.items():
+        if info["ambiguous"]:
+            for prov in PROVINCE_CONTEXT:
+                nm = info["aliases"][0]
+                tasks.append((g_url(f'"xã {nm}" "{prov}" when:{MAX_AGE_DAYS}d'), "Google News", (0, (l,))))
     # (c) Tin cấp tỉnh: Lào Cai / Yên Bái x từng chủ đề (không đòi tên xã)
     for prov in PROVINCE_CONTEXT:
         for k in GOOGLE_QUERIES:
-            q = f'"{prov}" {k} when:{MAX_AGE_DAYS}d'
-            u = f"https://news.google.com/rss/search?q={quote(q)}&hl=vi&gl=VN&ceid=VN:vi"
-            tasks.append((u, "Google News"))
+            tasks.append((g_url(f'"{prov}" {k} when:{MAX_AGE_DAYS}d'), "Google News", (1, ())))
     # (d) Nội dung trực tiếp về NQ205
     if NQ205_DIRECT_ENABLED:
         for k in NQ205_QUERIES:
             for suffix in ("", " Lào Cai"):
-                q = f"{k}{suffix} when:{MAX_AGE_DAYS}d"
-                u = f"https://news.google.com/rss/search?q={quote(q)}&hl=vi&gl=VN&ceid=VN:vi"
-                tasks.append((u, "Google News"))
+                tasks.append((g_url(f"{k}{suffix} when:{MAX_AGE_DAYS}d"), "Google News", (1, ())))
     tasks = list(dict.fromkeys(tasks))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
         list(ex.map(process_single_feed, tasks))
+
+    # Đọc lướt nội dung các bài chưa đủ căn cứ + đối chiếu lại bài cấp tỉnh / chưa xác minh xã
+    run_deep_phase()
 
     # Ưu tiên bài điểm cao, chỉ gửi tối đa MAX_ALERTS_PER_RUN
     candidates.sort(key=lambda c: c["score"], reverse=True)
     to_send = candidates[:MAX_ALERTS_PER_RUN]
 
     now = time.time()
-    time_str = started.strftime("%H:%M ngày %d/%m/%Y")
     sent = len(to_send)
     tier_cnt = {t: sum(1 for c in to_send if c.get("tier") == t) for t in ("commune", "province", "nq205")}
 
@@ -794,13 +970,16 @@ if __name__ == "__main__":
 
     # Chỉ báo cáo cho admin, KHÔNG làm phiền các thành viên khác
     if SEND_ADMIN_SUMMARY:
-        dur = int((datetime.now() - started).total_seconds())
+        dur = int(time.time() - t0)
         msg = (
             f"🤖 Radar NQ205 đã chạy xong ({started.strftime('%d/%m/%Y %H:%M')}, {dur}s)\n"
             f"• Tổng truy vấn: {len(tasks)} (RSS trực tiếp: {rss_total}, Google News: {g_total}, "
             f"phủ {len(NEWS_DOMAINS)} đầu báo)\n"
             f"• Tin mới đã gửi: {sent} (xã: {tier_cnt['commune']}, cấp tỉnh: {tier_cnt['province']}, NQ205: {tier_cnt['nq205']})\n"
-            f"• Tin còn chờ lần sau: {pending} | Bài đã đọc thân bài: {deep_count}\n"
+            f"• Tin còn chờ lần sau: {pending}\n"
+            f"• Bài đã duyệt: {scan_stats['entries']} | Cần đọc nội dung: {deep_stats['queued']} "
+            f"(đọc được {deep_stats['read_ok']}, lỗi {deep_stats['read_fail']}, vượt giới hạn {deep_stats['skipped_cap']})\n"
+            f"• Giải mã link Google News: {deep_stats['resolved']} được, {deep_stats['resolve_fail']} lỗi\n"
             f"• Người đăng ký: {len(subscribers_list())}\n"
             f"• RSS lỗi/rỗng lần này: {len(rss_bad_now)}/{rss_total} | Google News lỗi: {g_fail}/{g_total}"
         )
@@ -811,4 +990,15 @@ if __name__ == "__main__":
             msg += "\n".join(f"- {u}" for u in rss_dead[:15])
             if len(rss_dead) > 15:
                 msg += f"\n... và {len(rss_dead) - 15} nguồn khác"
+        if gnewsdecoder is None:
+            msg += "\n⚠️ Thiếu thư viện googlenewsdecoder (thêm vào requirements.txt): bài từ Google News chỉ được xét theo tiêu đề."
+        elif deep_stats["resolve_fail"] > deep_stats["resolved"] and deep_stats["resolve_fail"] >= 5:
+            msg += "\n⚠️ Giải mã link Google News lỗi nhiều: nhiều bài chỉ được xét theo tiêu đề."
+        if deep_stats["read_fail"] > deep_stats["read_ok"] and deep_stats["read_fail"] >= 5:
+            msg += "\n⚠️ Nhiều trang báo chặn đọc nội dung từ máy chủ GitHub."
+        if near_miss:
+            msg += "\n\n🔎 Tin bị loại nhưng nên kiểm tra tay (tối đa 12):\n"
+            msg += "\n".join(f"- {t[:90]} [{why}]\n  {lnk}" for t, why, lnk in near_miss[:12])
+            if len(near_miss) > 12:
+                msg += f"\n... và {len(near_miss) - 12} tin khác"
         tg_send(ADMIN_CHAT_ID, msg)
